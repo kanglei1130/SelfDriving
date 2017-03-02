@@ -54,11 +54,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         javaCameraView.setCvCameraViewListener(this);
 
 
-
-        //getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-
-        //use landscape view to capture images
-        //getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         if (Build.MODEL.equals("Nexus 5X")){
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE);
@@ -114,7 +109,5 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         return mRgba;
     }
-
-
 
 }
