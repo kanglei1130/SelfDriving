@@ -1,4 +1,4 @@
-package wisc.selfdriving;
+package wisc.selfdriving.activity;
 
 import android.content.pm.ActivityInfo;
 import android.os.Build;
@@ -16,15 +16,25 @@ import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Size;
+import org.opencv.videoio.VideoWriter;
+
+import java.io.File;
+
+import wisc.selfdriving.OpencvNativeClass;
+import wisc.selfdriving.R;
+import wisc.selfdriving.utility.Constants;
 
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
 
     private static String TAG = "MainActivity";
-    //JavaCameraView javaCameraView;
-    CameraBridgeViewBase javaCameraView;
+    JavaCameraView javaCameraView;
+
+    VideoWriter videoWriter = new VideoWriter();
 
     Mat mRgba, mGray;
+
 
     static {
         System.loadLibrary("MyOpencvLibs");
@@ -76,6 +86,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             javaCameraView.disableView();
         }
 
+        if(videoWriter != null) {
+            videoWriter.release();
+        }
     }
 
     protected void onResume() {
@@ -93,12 +106,22 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public void onCameraViewStarted(int width, int height) {
         mRgba = new Mat(height, width, CvType.CV_8UC4);
         mGray = new Mat(height, width, CvType.CV_8UC4);
+
+        File videoDir = new File(Constants.kVideoFolder);
+        if(!videoDir.exists()) {
+            videoDir.mkdir();
+        }
+        String file = Constants.kVideoFolder.concat("test.avi");
+        File vf = new File(file);
+        Log.d(TAG, file + ":" + String.valueOf(vf.exists()));
+        boolean openVW = videoWriter.open(file, VideoWriter.fourcc('M','J','P','G'), 10.0, new Size(width, height));
+        Log.d(TAG, String.valueOf(openVW));
     }
 
     @Override
     public void onCameraViewStopped() {
+        Log.d(TAG, "onCameraViewStopped");
         mRgba.release();
-
     }
 
     @Override
@@ -106,6 +129,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         mRgba = inputFrame.rgba();
 
         OpencvNativeClass.convertGray(mRgba.getNativeObjAddr(), mGray.getNativeObjAddr());
+
+        videoWriter.write(mRgba);
 
         return mRgba;
     }
