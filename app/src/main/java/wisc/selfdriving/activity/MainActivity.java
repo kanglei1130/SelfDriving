@@ -31,7 +31,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     private static String TAG = "MainActivity";
     JavaCameraView javaCameraView;
 
-    VideoWriter videoWriter = new VideoWriter();
+    VideoWriter videoWriter = null;
 
     Mat mRgba, mGray;
 
@@ -66,6 +66,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         if (Build.MODEL.equals("Nexus 5X")){
+            //Nexus 5X's screen is reversed, ridiculous! the image sensor does not fit in corrent orientation
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE);
         } else {
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
@@ -85,19 +86,13 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         if (javaCameraView != null) {
             javaCameraView.disableView();
         }
-
-        if(videoWriter != null) {
-            videoWriter.release();
-        }
     }
 
     protected void onResume() {
         super.onResume();
         if (OpenCVLoader.initDebug()) {
-            Log.i(TAG, "opencv loaded successed");
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         } else {
-            Log.i(TAG, "opencv loaded successed");
             OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_2_0, this, mLoaderCallback);
         }
     }
@@ -111,17 +106,20 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         if(!videoDir.exists()) {
             videoDir.mkdir();
         }
+        videoWriter = new VideoWriter();
         String file = Constants.kVideoFolder.concat("test.avi");
-        File vf = new File(file);
-        Log.d(TAG, file + ":" + String.valueOf(vf.exists()));
         boolean openVW = videoWriter.open(file, VideoWriter.fourcc('M','J','P','G'), 10.0, new Size(width, height));
-        Log.d(TAG, String.valueOf(openVW));
+        if(openVW == false) {
+            Log.e(TAG, "open video file failed");
+        }
     }
 
     @Override
     public void onCameraViewStopped() {
         Log.d(TAG, "onCameraViewStopped");
         mRgba.release();
+
+        videoWriter.release();
     }
 
     @Override
