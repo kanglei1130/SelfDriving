@@ -16,13 +16,16 @@ import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
 import org.opencv.core.Size;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.videoio.VideoWriter;
 
 import java.io.File;
 
 import wisc.selfdriving.OpencvNativeClass;
 import wisc.selfdriving.R;
+import wisc.selfdriving.imageprocess.ImageProcess;
 import wisc.selfdriving.utility.Constants;
 
 
@@ -32,6 +35,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     JavaCameraView javaCameraView;
 
     VideoWriter videoWriter = null;
+    private ImageProcess imageProcess = null;
 
     Mat mRgba, mGray;
 
@@ -102,6 +106,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         mRgba = new Mat(height, width, CvType.CV_8UC4);
         mGray = new Mat(height, width, CvType.CV_8UC4);
 
+        imageProcess = new ImageProcess(1.0, width, height);
+
         File videoDir = new File(Constants.kVideoFolder);
         if(!videoDir.exists()) {
             videoDir.mkdir();
@@ -122,13 +128,21 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         videoWriter.release();
     }
 
+
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         mRgba = inputFrame.rgba();
 
+        long start = System.currentTimeMillis();
         OpencvNativeClass.convertGray(mRgba.getNativeObjAddr(), mGray.getNativeObjAddr());
+        long end = System.currentTimeMillis();
+        Log.d(TAG, "It took " + (end - start) + "ms to process the image");
 
         videoWriter.write(mRgba);
+
+        //get encoded image and send to server
+        MatOfByte buf = imageProcess.getCompressedData(mRgba);
+
 
         return mRgba;
     }
