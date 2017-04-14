@@ -54,7 +54,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     Mat mRgba, mGray;
     ///////////////////////////
     public int rotation = 0;
-    Handler handler = new Handler();
     final String start = "start";
     final String stop = "stop";
     String Order = null;
@@ -112,20 +111,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
     public void onClickStart(View view) {
         startUDPService();
-
-        handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                //Do something after 3000ms
-                String ip = mUDPConnection.callFunction();
-                Log.d(TAG,"SiteLocalAddress:"+ip);
-                Log.d(TAG,mUDPConnection.getOrder());
-            }
-        }, 5000);
         setUiEnabled(true);
         startSerialService();
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter("SerialPort"));
-        LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter("UDPserver"));
     }
 
     public void setUiEnabled(boolean bool) {
