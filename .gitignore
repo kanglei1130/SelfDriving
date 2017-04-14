@@ -9,3 +9,5 @@
 app/src/main/jniLibs/armeabi-v7a/libMyOpencvLibs.so
 openCVLibrary320/build
 openCVLibrary320/openCVLibrary320.iml
+gradle.properties
+gradle
