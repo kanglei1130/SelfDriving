@@ -48,9 +48,6 @@ dependencies {
     compile 'com.android.support.constraint:constraint-layout:1.0.0-alpha7'
     testCompile 'junit:junit:4.12'
     
-  #=============================================================================#
-  #                               Add usb libaries                              #
-  #=============================================================================#
     compile 'com.android.support:appcompat-v7:23.0.1'
     compile files('src/main/jniLibs/usbserial.jar')
     compile 'com.android.volley:volley:1.0.0'
