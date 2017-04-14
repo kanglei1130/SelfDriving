@@ -6,4 +6,5 @@
 /build
 /captures
 .externalNativeBuild
-
+app/src/main/jniLibs/armeabi-v7a/libMyOpencvLibs.so
+openCVLibrary320/build
