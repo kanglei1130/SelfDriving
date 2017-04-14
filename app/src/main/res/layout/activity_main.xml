@@ -22,6 +22,7 @@
             android:layout_height="0px"
             android:layout_weight="0.5"
             android:id="@+id/btnstart"
+            android:onClick="onClickStart"/>
             />
         <Button
             android:text="test"
@@ -31,6 +32,7 @@
             android:layout_height="0px"
             android:layout_weight="0.5"
             android:id="@+id/btntest"
+            android:onClick="onClickTest"
             />
     </LinearLayout>
 
