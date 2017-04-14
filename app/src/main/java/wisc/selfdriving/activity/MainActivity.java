@@ -198,7 +198,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         //get encoded image and send to server
         MatOfByte buf = imageProcess.getCompressedData(mRgba);
 
-        return mRgba;
+        return mGray;
     }
 
 ///////////////////////////////////////////////
