@@ -54,11 +54,10 @@ public class SerialPortService extends Service {
             if (serialPort != null) {
                 Log.d(TAG,cmd);
                 serialPort.write(cmd.getBytes());
-                return cmd;
             } else {
                 Log.d(TAG, cmd + " serialPort is null");
-                return cmd;
             }
+            return cmd;
         }
     }
 
@@ -102,15 +101,12 @@ public class SerialPortService extends Service {
         HashMap<String, UsbDevice> usbDevices = usbManager.getDeviceList();
         Log.d(TAG, String.valueOf(usbDevices.size()));
         if (!usbDevices.isEmpty()) {
-            Log.d(TAG,"usbDevices.is NOT Empty");
-            boolean keep = true;
+            Log.d(TAG,"usbDevices.is size:" + usbDevices.size());
             for (Map.Entry<String, UsbDevice> entry : usbDevices.entrySet()) {
                 device = entry.getValue();
                 PendingIntent pi = PendingIntent.getBroadcast(this, 0, new Intent(ACTION_USB_PERMISSION), 0);
                 usbManager.requestPermission(device, pi);
-                keep = false;
-                if (!keep)
-                    break;
+                break;
             }
         } else {
             Log.e(TAG, "usb device list is empty");
@@ -120,13 +116,12 @@ public class SerialPortService extends Service {
     }
 
 
-    String buffer = "";
     UsbSerialInterface.UsbReadCallback mCallback = new UsbSerialInterface.UsbReadCallback() { //Defining a Callback which triggers whenever data is read.
         @Override
         public void onReceivedData(byte[] arg0) {
-            String data = null;
+            String buffer = "";
             try {
-                data = new String(arg0, "UTF-8");
+                String data = new String(arg0, "UTF-8");
                 for(int i = 0; i < data.length(); ++i) {
                     String tmp = data.substring(i, i + 1);
                     buffer += tmp;
