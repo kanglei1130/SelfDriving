@@ -22,11 +22,11 @@ public class UDPServer implements Runnable {
     public int serverPort = 55555;
     String IPName = "192.168.1.102";
     private static final String TAG = "UDPServer";
+    public String order = "";
 
     public UDPServer() {
         try {
             serverSocket = new DatagramSocket(serverPort);
-            //serverSocket.setReuseAddress(true);
             clientIPAddress = InetAddress.getByName(IPName);
         } catch (SocketException e) {
             // TODO Auto-generated catch block
@@ -58,6 +58,18 @@ public class UDPServer implements Runnable {
                 serverSocket.receive(receivePacket);
                 String sentence = new String(receiveData,0,receivePacket.getLength());
                 Log.d(TAG, "RECEIVED: " + sentence);
+                double throttle = 1.0;
+                String tmp = "throttle(" + String.valueOf(throttle) + ")";
+                Log.d(TAG,tmp);
+                if (sentence.contains(tmp)){
+                    order = tmp;
+                }
+                Log.d(TAG, "Got order: " + order);
+
+                //UDPService.order = order;
+
+
+
                 clientIPAddress = receivePacket.getAddress();
                 clientPort = receivePacket.getPort();
                 Log.d(TAG, clientIPAddress.toString());

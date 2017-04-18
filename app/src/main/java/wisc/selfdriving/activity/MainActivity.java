@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -14,7 +13,6 @@ import android.view.WindowManager;
 import android.content.IntentFilter;
 import android.support.v4.content.LocalBroadcastManager;
 import android.widget.Button;
-
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -39,6 +37,7 @@ import wisc.selfdriving.service.SerialPortConnection;
 import wisc.selfdriving.service.SerialPortService;
 import wisc.selfdriving.service.UDPService;
 import wisc.selfdriving.service.UDPServiceConnection;
+import wisc.selfdriving.utility.CarControl;
 import wisc.selfdriving.utility.Constants;
 
 
@@ -50,13 +49,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     VideoWriter videoWriter = null;
     private ImageProcess imageProcess = null;
-
     Mat mRgba, mGray;
-    ///////////////////////////
+
     public int rotation = 0;
-    final String start = "start";
-    final String stop = "stop";
-    String Order = null;
     int numToRotate = 5;
 
     static {
@@ -97,23 +92,19 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         } else {
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         }
-///////////////////////////////////////////////
         setUiEnabled(false);
+
     }
 
-    public void Stop() {
-        super.onDestroy();
-        if (javaCameraView != null) {
-            javaCameraView.disableView();
-        }
-        stopSerialService();
-        stopUDPService();
-    }
     public void onClickStart(View view) {
+
         startUDPService();
+        //control the button boolean
         setUiEnabled(true);
+
         startSerialService();
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter("SerialPort"));
+        LocalBroadcastManager.getInstance(this).registerReceiver(orderMessageReceiver, new IntentFilter("UDPserver"));
     }
 
     public void setUiEnabled(boolean bool) {
@@ -121,16 +112,18 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         testButton.setEnabled(bool);
     }
 
+    //test the currency of HallData, press Test, the car will go forward for 5
     public void onClickTest(View view) {
         Log.d(TAG,"test begin");
-        String go = "throttle(1.0)";
         if (mSerialPortConnection != null) {
-            mSerialPortConnection.sendCommandFunction(go);
+            mSerialPortConnection.sendCommandFunction("throttle(1.0)");
+            if(mSerialPortConnection.sendCommandFunction("throttle(1.0)")==1){
+                Log.d(TAG,"Order send succesfully");
+            }
         } else {
             Log.d(TAG, "mSerialPortConnection is null");
         }
     }
-///////////////////////////////////////////////
 
     protected void onPause() {
         super.onPause();
@@ -144,6 +137,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         if (javaCameraView != null) {
             javaCameraView.disableView();
         }
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver);
         stopSerialService();
         stopUDPService();
     }
@@ -180,7 +174,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public void onCameraViewStopped() {
         Log.d(TAG, "onCameraViewStopped");
         mRgba.release();
-
         videoWriter.release();
     }
 
@@ -201,8 +194,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         return mGray;
     }
 
-///////////////////////////////////////////////
-    //SerialPortConnection
+    //initial SerialPortConnection
     private static Intent mSerial = null;
     private static SerialPortConnection mSerialPortConnection = null;
 
@@ -222,7 +214,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
     }
 
-    //UDPConnetion
+    //initial UDPConnetion
     private static Intent mUDP = null;
     private static UDPServiceConnection mUDPConnection = null;
 
@@ -246,26 +238,53 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+
+            //detect order from UDPService and move as order
+            String order = mUDPConnection.getOrder();
+            Log.d(TAG,order);
+            if (mSerialPortConnection != null && order.contains("throttle")) {
+                mSerialPortConnection.sendCommandFunction(order);
+                Log.d(TAG,"run");
+            }
+
+            //get rotation and speed data from usbserial
             String speedAndRotation = intent.getStringExtra("speedAndRotation");
-            String rotationStatus = intent.getStringExtra("rotationStatus");
-            String stop = "throttle(0.0)";
-            
             Gson gson = new GsonBuilder().create();
             SerialPortService.SerialReading reading = gson.fromJson(speedAndRotation, SerialPortService.SerialReading.class);
 
+            //rotation status and send it to UDP service
             rotation = reading.rotation_;
             Log.d(TAG,String.valueOf(rotation));
             mUDPConnection.sendData(String.valueOf(rotation));
 
+            //used for test, go straight forward for numToRotate rotations
             if (rotation>numToRotate-1){
                 Log.d(TAG, "rotation over " + numToRotate);
                 if (mSerialPortConnection != null) {
-                    mSerialPortConnection.sendCommandFunction(stop);
+                    mSerialPortConnection.sendCommandFunction("throttle(0.0)");
                     Log.d(TAG, "shold stop");
                 } else {
                     Log.d(TAG, "mSerialPortConnection is null");
                 }
             }
+        }
+    };
+
+    private BroadcastReceiver orderMessageReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            //get order from UDPService
+            String getOrder = intent.getStringExtra("order");
+            Gson gson = new Gson();
+            CarControl control = gson.fromJson(getOrder, CarControl.class);
+
+            //detect order from UDPService and move as order
+            double throttle = (double)control.speed_ / 10.0;
+            double steering = (double)control.rotation_ / 10.0;
+            mSerialPortConnection.sendCommandFunction("throttle(" + String.valueOf(throttle) + ")");
+            mSerialPortConnection.sendCommandFunction("steering(" + String.valueOf(steering) + ")");
+
         }
     };
 

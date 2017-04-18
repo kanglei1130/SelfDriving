@@ -1,9 +1,5 @@
 package wisc.selfdriving.service;
 
-/**
- * Created by wei on 2/23/17.
- */
-
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -45,19 +41,20 @@ public class SerialPortService extends Service {
     private final Binder binder_ = new SerialBinder();
     private AtomicBoolean isRunning_ = new AtomicBoolean(false);
 
-
     public class SerialBinder extends Binder {
         public SerialPortService getService() {
             return SerialPortService.this;
         }
-        public String sendCommand(String cmd) {
+        public int sendCommand(String cmd) {
             if (serialPort != null) {
                 Log.d(TAG,cmd);
+                cmd += "\n";
                 serialPort.write(cmd.getBytes());
+                return 1;
             } else {
                 Log.d(TAG, cmd + " serialPort is null");
+                return -1;
             }
-            return cmd;
         }
     }
 
@@ -70,8 +67,6 @@ public class SerialPortService extends Service {
         registerReceiver(broadcastReceiver, filter);
         Log.d(TAG,"registerReceiver");
     }
-
-
 
     //auto start
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -113,26 +108,29 @@ public class SerialPortService extends Service {
         }
         isRunning_.set(true);
         registerReceiver();
+        sendHallData(0.00,rotationNumber);
     }
 
 
     UsbSerialInterface.UsbReadCallback mCallback = new UsbSerialInterface.UsbReadCallback() { //Defining a Callback which triggers whenever data is read.
+
+        String buffer = "";
         @Override
         public void onReceivedData(byte[] arg0) {
-            String buffer = "";
+
             try {
                 String data = new String(arg0, "UTF-8");
-                for(int i = 0; i < data.length(); ++i) {
-                    String tmp = data.substring(i, i + 1);
-                    buffer += tmp;
-                    while(buffer.contains("\n")) {
-                        int newline = buffer.indexOf("\n");
-                        String command = buffer.substring(0, newline);
-                        buffer = buffer.substring(newline + 1);
-                        Log.d(TAG,command);
-                        detectRotation(command);
-                    }
+                buffer += data;
+                Log.d(TAG, buffer);
+
+                while(buffer.contains("\n")) {
+                    int newline = buffer.indexOf("\n");
+                    String command = buffer.substring(0, newline);
+                    buffer = buffer.substring(newline + 1);
+                    Log.d(TAG, "parsed:" + command);
+                    detectRotation(command);
                 }
+
             } catch (UnsupportedEncodingException e) {
                 e.printStackTrace();
             }
@@ -184,10 +182,8 @@ public class SerialPortService extends Service {
             Log.d(TAG, "No."+rotationNumber + " rotation detected");
             Log.d(TAG, "Speed of this rotation is " + String.valueOf(speed));
             sendHallData(speed,rotationNumber);
-            return rotationNumber;
-        } else {
-            return rotationNumber;
         }
+        return rotationNumber;
     }
 
     private double calculateSpeed(int rotation){;

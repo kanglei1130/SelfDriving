@@ -24,7 +24,7 @@ public class SerialPortConnection implements ServiceConnection {
     }
 
 
-    public String sendCommandFunction(String cmd) {
+    public int sendCommandFunction(String cmd) {
         Log.d(TAG, cmd);
         return binder.sendCommand(cmd);
     }

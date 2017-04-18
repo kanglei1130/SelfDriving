@@ -18,9 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class SensorService extends Service implements LocationListener {
 
     private final String TAG = "Sensor Service";
-
     private final Binder binder_ = new SensorBinder();
-
 
     public class SensorBinder extends Binder {
         public SensorService getService() {

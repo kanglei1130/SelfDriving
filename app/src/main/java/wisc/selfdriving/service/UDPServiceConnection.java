@@ -23,11 +23,11 @@ public class UDPServiceConnection implements ServiceConnection {
         binder = null;
         Log.d(TAG, "distconnected");
     }
-
+/*
     public String callFunction() {
         return binder.getIp();
     }
-
+*/
     public void sendData(String n) {
         Log.d(TAG, n);
         binder.sendData(n);
