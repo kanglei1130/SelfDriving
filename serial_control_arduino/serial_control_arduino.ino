@@ -50,7 +50,7 @@ void handleNewLine(String input) {
     int right = input.indexOf(')');
     String value = input.substring(left + 1, right);
     float pos = value.toFloat();
-    if(pos >= 0.0 & pos <= 1.0) {
+    if(pos >= 0.0 & pos <= 1.2) {
       writeThrottle(pos);
     } else {
       Serial.println("invalid throttle value");

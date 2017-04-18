@@ -53,7 +53,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     Mat mRgba, mGray;
 
     public int rotation = 0;
-    int numToRotate = 5;
+    int numToRotate = 100;
 
     static {
         System.loadLibrary("MyOpencvLibs");
@@ -251,6 +251,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             mUDPConnection.sendData(String.valueOf(rotation));
 
             //used for test, go straight forward for numToRotate rotations
+            /*
             if (rotation>numToRotate-1){
                 Log.d(TAG, "rotation over " + numToRotate);
                 if (mSerialPortConnection != null) {
@@ -260,6 +261,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     Log.d(TAG, "mSerialPortConnection is null");
                 }
             }
+            */
         }
     };
 
@@ -274,7 +276,12 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             CarControl control = gson.fromJson(getOrder, CarControl.class);
 
             //detect order from UDPService and move as order
-            double throttle = (double)control.speed_ / 10.0;
+
+            double throttle = 0.0;
+            if(control.speed_ != 0) {
+                throttle = (double) control.speed_ * 0.02 + 1.0;
+            }
+
             double steering = (double)control.rotation_ / 10.0;
             mSerialPortConnection.sendCommandFunction("throttle(" + String.valueOf(throttle) + ")");
             mSerialPortConnection.sendCommandFunction("steering(" + String.valueOf(steering) + ")");
