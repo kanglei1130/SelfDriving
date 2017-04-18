@@ -23,11 +23,8 @@ public class SerialPortConnection implements ServiceConnection {
         Log.d(TAG, "distconnected");
     }
 
-
+    //send command from main to serialPort
     public int sendCommandFunction(String cmd) {
-        Log.d(TAG, cmd);
         return binder.sendCommand(cmd);
     }
-
-
 };

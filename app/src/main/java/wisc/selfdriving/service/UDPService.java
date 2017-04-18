@@ -34,10 +34,13 @@ public class UDPService extends Service implements Runnable {
     public String ip = "";
     public String order = "";
     public String rotation = "0";
-
-
-
-
+    public DatagramSocket serverSocket = null;
+    public InetAddress clientIPAddress = null;
+    public int clientPort = 4444;
+    public int serverPort = 55555;
+    String IPName = "192.168.1.102";
+    private Boolean UDPThreadRunning = null;
+    CarControl control;
 
     public class UDPBinder extends Binder {
         public UDPService getService() {
@@ -62,6 +65,7 @@ public class UDPService extends Service implements Runnable {
 
     public int onStartCommand(Intent intent, int flags, int startId) {
         startService();
+        //get local ip
         getIpAddress();
         Log.d(TAG,ip);
         return START_STICKY;
@@ -86,12 +90,12 @@ public class UDPService extends Service implements Runnable {
 
 
     public void onDestroy() {
-
         Log.d(TAG,"udpserver connection is closed");
         stopSelf();
         UDPThreadRunning = false;
     }
 
+    //get local ip for smooth user
     private void getIpAddress() {
         try {
             Enumeration<NetworkInterface> enumNetworkInterfaces = NetworkInterface.getNetworkInterfaces();
@@ -112,7 +116,7 @@ public class UDPService extends Service implements Runnable {
         }
     }
 
-
+    //send order achieved from UDP client to main
     private void sendUDPServerOrder(CarControl control) {
 
         Gson gson = new Gson();
@@ -125,19 +129,6 @@ public class UDPService extends Service implements Runnable {
 
         this.send(json);
     }
-
-    ///////////////////////////////////////////////////////////////////////////////////////
-
-
-    public DatagramSocket serverSocket = null;
-    public InetAddress clientIPAddress = null;
-    public int clientPort = 4444;
-    public int serverPort = 55555;
-    String IPName = "192.168.1.102";
-    private Boolean UDPThreadRunning = null;
-
-
-    CarControl control;
 
     public void run() {
         control = new CarControl();
@@ -152,37 +143,33 @@ public class UDPService extends Service implements Runnable {
                 String sentence = new String(receiveData, 0, receivePacket.getLength());
                 Log.d(TAG, "RECEIVED: " + sentence);
 
+                //get UDPClient ip and port
                 clientIPAddress = receivePacket.getAddress();
                 clientPort = receivePacket.getPort();
-                Log.d(TAG, clientIPAddress.toString());
-                Log.d(TAG, String.valueOf(clientPort));
 
+                //receive gson data from UDPClient
                 Gson gson = new GsonBuilder().create();
                 CarControl command = gson.fromJson(sentence, CarControl.class);
 
-                //control forward, stop and backward
+                //control speed and turn rotation angle
                 control.speed_ += command.speed_;
                 control.rotation_ += command.rotation_;
 
                 control.speed_ = Math.max(control.speed_, 0);
                 control.speed_ = Math.min(control.speed_, 10);
 
-
                 control.rotation_ = Math.max(control.rotation_, 0);
                 control.rotation_ = Math.min(control.rotation_, 10);
 
-
-
                 sendUDPServerOrder(control);
-
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
         }
-
     }
 
+    //send data back to UDPClient
     public void send(String data) {
         Log.d(TAG, data);
         byte[] sendData = data.getBytes();
@@ -194,6 +181,4 @@ public class UDPService extends Service implements Runnable {
             e.printStackTrace();
         }
     }
-
-
 }

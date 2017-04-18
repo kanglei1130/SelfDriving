@@ -39,6 +39,7 @@ import wisc.selfdriving.service.UDPService;
 import wisc.selfdriving.service.UDPServiceConnection;
 import wisc.selfdriving.utility.CarControl;
 import wisc.selfdriving.utility.Constants;
+import wisc.selfdriving.utility.SerialReading;
 
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
@@ -84,7 +85,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         javaCameraView.setVisibility(View.VISIBLE);
         javaCameraView.setCvCameraViewListener(this);
 
-
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         if (Build.MODEL.equals("Nexus 5X")){
             //Nexus 5X's screen is reversed, ridiculous! the image sensor does not fit in corrent orientation
@@ -93,20 +93,22 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         }
         setUiEnabled(false);
-
     }
 
     public void onClickStart(View view) {
 
         startUDPService();
-        //control the button boolean
+        //control the button activity
         setUiEnabled(true);
 
         startSerialService();
+        //receive data from SerialPort
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter("SerialPort"));
+        //receive data from UDPService
         LocalBroadcastManager.getInstance(this).registerReceiver(orderMessageReceiver, new IntentFilter("UDPserver"));
     }
 
+    //control the button activity
     public void setUiEnabled(boolean bool) {
         startButton.setEnabled(!bool);
         testButton.setEnabled(bool);
@@ -118,7 +120,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         if (mSerialPortConnection != null) {
             mSerialPortConnection.sendCommandFunction("throttle(1.0)");
             if(mSerialPortConnection.sendCommandFunction("throttle(1.0)")==1){
-                Log.d(TAG,"Order send succesfully");
             }
         } else {
             Log.d(TAG, "mSerialPortConnection is null");
@@ -235,26 +236,18 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
     }
 
+    //receive data from USBSerial
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
 
-            //detect order from UDPService and move as order
-            String order = mUDPConnection.getOrder();
-            Log.d(TAG,order);
-            if (mSerialPortConnection != null && order.contains("throttle")) {
-                mSerialPortConnection.sendCommandFunction(order);
-                Log.d(TAG,"run");
-            }
-
-            //get rotation and speed data from usbserial
+            //get rotation and speed data from USBSerial
             String speedAndRotation = intent.getStringExtra("speedAndRotation");
             Gson gson = new GsonBuilder().create();
-            SerialPortService.SerialReading reading = gson.fromJson(speedAndRotation, SerialPortService.SerialReading.class);
+            SerialReading reading = gson.fromJson(speedAndRotation, SerialReading.class);
 
-            //rotation status and send it to UDP service
+            //rotation status and send back to UDP service
             rotation = reading.rotation_;
-            Log.d(TAG,String.valueOf(rotation));
             mUDPConnection.sendData(String.valueOf(rotation));
 
             //used for test, go straight forward for numToRotate rotations
@@ -270,6 +263,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
     };
 
+    //receive data from UDPService
     private BroadcastReceiver orderMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {

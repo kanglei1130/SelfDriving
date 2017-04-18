@@ -22,6 +22,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import wisc.selfdriving.utility.SerialReading;
+
 /**
  * Created by wei on 2/23/17.
  */
@@ -47,7 +49,6 @@ public class SerialPortService extends Service {
         }
         public int sendCommand(String cmd) {
             if (serialPort != null) {
-                Log.d(TAG,cmd);
                 cmd += "\n";
                 serialPort.write(cmd.getBytes());
                 return 1;
@@ -58,12 +59,12 @@ public class SerialPortService extends Service {
         }
     }
 
+    //register the USB and broadcastReceiver, get permission and attached the device
     public void registerReceiver() {
         IntentFilter filter = new IntentFilter();
         filter.addAction(ACTION_USB_PERMISSION);
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
-
         registerReceiver(broadcastReceiver, filter);
         Log.d(TAG,"registerReceiver");
     }
@@ -90,6 +91,7 @@ public class SerialPortService extends Service {
         stopSelf();
     }
 
+    //connect the UsbDevice with the port
     private void startService() {
         Log.d(TAG, "start service");
         usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
@@ -111,32 +113,27 @@ public class SerialPortService extends Service {
         sendHallData(0.00,rotationNumber);
     }
 
-
-    UsbSerialInterface.UsbReadCallback mCallback = new UsbSerialInterface.UsbReadCallback() { //Defining a Callback which triggers whenever data is read.
-
+    //Defining a Callback which triggers whenever data is read.
+    UsbSerialInterface.UsbReadCallback mCallback = new UsbSerialInterface.UsbReadCallback() {
         String buffer = "";
         @Override
         public void onReceivedData(byte[] arg0) {
-
             try {
                 String data = new String(arg0, "UTF-8");
                 buffer += data;
-                Log.d(TAG, buffer);
-
                 while(buffer.contains("\n")) {
                     int newline = buffer.indexOf("\n");
                     String command = buffer.substring(0, newline);
                     buffer = buffer.substring(newline + 1);
-                    Log.d(TAG, "parsed:" + command);
                     detectRotation(command);
                 }
-
             } catch (UnsupportedEncodingException e) {
                 e.printStackTrace();
             }
         }
     };
 
+    //Receive data from serialPort
     private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() { //Broadcast Receiver to automatically start and stop the Serial connection.
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -175,6 +172,7 @@ public class SerialPortService extends Service {
      * @param data
      * @return
      */
+    //detect the Halldata and current rotation number
     private int detectRotation(String data){
         if (data.contains("rotation(1.0)")) {
             rotationNumber++;
@@ -186,6 +184,7 @@ public class SerialPortService extends Service {
         return rotationNumber;
     }
 
+    //calculate the average speed for each rotation
     private double calculateSpeed(int rotation){;
         double currenttime= System.currentTimeMillis();
         double speed = 1000.00/(currenttime-previousTime);
@@ -193,16 +192,7 @@ public class SerialPortService extends Service {
         return speed;
     }
 
-    public class SerialReading {
-        public double speed_;
-        public int rotation_;
-
-        public SerialReading(double speed, int rotation){
-            this.speed_ = speed;
-            this.rotation_ = rotation;
-        }
-    }
-
+    //send the Halldata(current rotation number and speed) to main
     private void sendHallData(double speed, int rotation) {
 
         SerialReading obj = new SerialReading(speed, rotation);
