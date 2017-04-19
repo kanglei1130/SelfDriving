@@ -39,6 +39,8 @@ import wisc.selfdriving.service.UDPService;
 import wisc.selfdriving.service.UDPServiceConnection;
 import wisc.selfdriving.utility.CarControl;
 import wisc.selfdriving.utility.Constants;
+import wisc.selfdriving.utility.ImagePayload;
+import wisc.selfdriving.utility.JsonWrapper;
 import wisc.selfdriving.utility.SerialReading;
 
 
@@ -53,7 +55,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     Mat mRgba, mGray;
 
     public int rotation = 0;
-    int numToRotate = 100;
 
     static {
         System.loadLibrary("MyOpencvLibs");
@@ -178,6 +179,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         videoWriter.release();
     }
 
+
+    private Gson gson = new Gson();
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         mRgba = inputFrame.rgba();
@@ -191,6 +194,10 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         //get encoded image and send to server
         MatOfByte buf = imageProcess.getCompressedData(mRgba);
+
+        ImagePayload imagePayload = new ImagePayload(buf);
+        JsonWrapper jsonWrapper = new JsonWrapper(JsonWrapper.IMAGE, imagePayload);
+        mUDPConnection.sendData(gson.toJson(jsonWrapper));
 
         return mGray;
     }
@@ -243,7 +250,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
             //get rotation and speed data from USBSerial
             String speedAndRotation = intent.getStringExtra("speedAndRotation");
-            Gson gson = new GsonBuilder().create();
+            Gson gson = new Gson();
             SerialReading reading = gson.fromJson(speedAndRotation, SerialReading.class);
 
             //rotation status and send back to UDP service
@@ -279,12 +286,15 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
             double throttle = 0.0;
             if(control.speed_ != 0) {
-                throttle = (double) control.speed_ * 0.02 + 1.0;
+                throttle = control.speed_ * 0.02 + 1.0;
             }
+            double steering = control.rotation_ / 10.0;
 
-            double steering = (double)control.rotation_ / 10.0;
+
             mSerialPortConnection.sendCommandFunction("throttle(" + String.valueOf(throttle) + ")");
             mSerialPortConnection.sendCommandFunction("steering(" + String.valueOf(steering) + ")");
+
+
 
         }
     };
