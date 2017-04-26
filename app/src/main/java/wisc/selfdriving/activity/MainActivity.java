@@ -15,7 +15,6 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.widget.Button;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
@@ -74,6 +73,13 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
     };
 
+    /**
+     * 1. turn on the RC car
+     * 2. open the app
+     * 3. plug USB serial port (press okay to allow usb serial communication)
+     * @param savedInstanceState
+     */
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -81,6 +87,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         setContentView(R.layout.activity_main);
         startButton = (Button) findViewById(R.id.btnstart);
         testButton = (Button) findViewById(R.id.btntest);
+        setButtonOnClickListener();
 
         javaCameraView = (JavaCameraView) findViewById(R.id.java_camera_view);
         javaCameraView.setVisibility(View.VISIBLE);
@@ -93,39 +100,38 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         } else {
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         }
-        setUiEnabled(false);
-    }
 
-    public void onClickStart(View view) {
-
-        startUDPService();
-        //control the button activity
-        setUiEnabled(true);
-
-        startSerialService();
-        //receive data from SerialPort
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter("SerialPort"));
         //receive data from UDPService
         LocalBroadcastManager.getInstance(this).registerReceiver(orderMessageReceiver, new IntentFilter("UDPserver"));
+
     }
 
-    //control the button activity
-    public void setUiEnabled(boolean bool) {
-        startButton.setEnabled(!bool);
-        testButton.setEnabled(bool);
-    }
-
-    //test the currency of HallData, press Test, the car will go forward for 5
-    public void onClickTest(View view) {
-        Log.d(TAG,"test begin");
-        if (mSerialPortConnection != null) {
-            mSerialPortConnection.sendCommandFunction("throttle(1.0)");
-            if(mSerialPortConnection.sendCommandFunction("throttle(1.0)")==1){
+    public void setButtonOnClickListener() {
+        startButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startButton.setEnabled(false);
+                startUDPService();
+                //control the button activity
+                startSerialService();
             }
-        } else {
-            Log.d(TAG, "mSerialPortConnection is null");
-        }
+        });
+        testButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mSerialPortConnection != null) {
+                    if(mSerialPortConnection.sendCommandFunction("throttle(1.0)") != 1) {
+                        Log.e(TAG, "serial port send failed");
+                    }
+                } else {
+                    Log.d(TAG, "mSerialPortConnection is null");
+                }
+            }
+        });
     }
+
+
 
     protected void onPause() {
         super.onPause();
@@ -140,6 +146,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             javaCameraView.disableView();
         }
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(orderMessageReceiver);
+
         stopSerialService();
         stopUDPService();
     }
@@ -180,25 +188,35 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
 
-    private Gson gson = new Gson();
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         mRgba = inputFrame.rgba();
 
-        long start = System.currentTimeMillis();
-        OpencvNativeClass.convertGray(mRgba.getNativeObjAddr(), mGray.getNativeObjAddr());
-        long end = System.currentTimeMillis();
-        //Log.d(TAG, "It took " + (end - start) + "ms to process the image");
+        //int steering = OpencvNativeClass.convertGray(mRgba.getNativeObjAddr(), mGray.getNativeObjAddr());
 
-        videoWriter.write(mRgba);
+        /*
+        CarControl command = new CarControl();
+        command.setRelativeControl();
+        command.steering_ = steering;
+        updateCarControl(command);
+        */
+
+        //videoWriter.write(mRgba);
 
         //get encoded image and send to server
-        MatOfByte buf = imageProcess.getCompressedData(mRgba);
 
+        /*
+        MatOfByte buf = imageProcess.getCompressedData(mRgba);
         ImagePayload imagePayload = new ImagePayload(buf);
         JsonWrapper jsonWrapper = new JsonWrapper(JsonWrapper.IMAGE, imagePayload);
-        mUDPConnection.sendData(gson.toJson(jsonWrapper));
 
+        if(mUDPConnection != null) {
+            long start = System.currentTimeMillis();
+            mUDPConnection.sendData(gson.toJson(jsonWrapper));
+            long end = System.currentTimeMillis();
+            Log.d(TAG, "It took " + (end - start) + "ms to process the image");
+        }
+        */
         return mGray;
     }
 
@@ -207,6 +225,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     private static SerialPortConnection mSerialPortConnection = null;
 
     private void startSerialService() {
+        Log.d(TAG, "start serial service");
         mSerial = new Intent(this, SerialPortService.class);
         mSerialPortConnection = new SerialPortConnection();
         bindService(mSerial, mSerialPortConnection, Context.BIND_AUTO_CREATE);
@@ -214,7 +233,12 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     private void stopSerialService() {
+
+        Log.d(TAG, "stop serial service");
         if(mSerial != null && mSerialPortConnection != null) {
+            mSerialPortConnection.sendCommandFunction("throttle(0.0)");
+            mSerialPortConnection.sendCommandFunction("steering(0.5)");
+
             unbindService(mSerialPortConnection);
             stopService(mSerial);
             mSerial = null;
@@ -256,21 +280,24 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             //rotation status and send back to UDP service
             rotation = reading.rotation_;
             mUDPConnection.sendData(String.valueOf(rotation));
-
-            //used for test, go straight forward for numToRotate rotations
-            /*
-            if (rotation>numToRotate-1){
-                Log.d(TAG, "rotation over " + numToRotate);
-                if (mSerialPortConnection != null) {
-                    mSerialPortConnection.sendCommandFunction("throttle(0.0)");
-                    Log.d(TAG, "shold stop");
-                } else {
-                    Log.d(TAG, "mSerialPortConnection is null");
-                }
-            }
-            */
         }
     };
+
+    /**
+     * current car control status
+     */
+    private CarControl carControl = new CarControl();
+
+    private void updateCarControl(CarControl command) {
+        carControl.speed_ += command.speed_;
+        carControl.steering_ += command.steering_;
+
+        carControl.speed_ = Math.max(carControl.speed_, 0);
+        carControl.speed_ = Math.min(carControl.speed_, 10);
+
+        carControl.steering_ = Math.max(carControl.steering_, 0);
+        carControl.steering_ = Math.min(carControl.steering_, 10);
+    }
 
     //receive data from UDPService
     private BroadcastReceiver orderMessageReceiver = new BroadcastReceiver() {
@@ -280,21 +307,20 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             //get order from UDPService
             String getOrder = intent.getStringExtra("order");
             Gson gson = new Gson();
-            CarControl control = gson.fromJson(getOrder, CarControl.class);
+            CarControl command = gson.fromJson(getOrder, CarControl.class);
+            updateCarControl(command);
 
             //detect order from UDPService and move as order
-
             double throttle = 0.0;
-            if(control.speed_ != 0) {
-                throttle = control.speed_ * 0.02 + 1.0;
+            if(carControl.speed_ != 0) {
+                throttle = carControl.speed_ * 0.02 + 1.0;
             }
-            double steering = control.rotation_ / 10.0;
-
+            double steering = carControl.steering_ / 10.0;
 
             mSerialPortConnection.sendCommandFunction("throttle(" + String.valueOf(throttle) + ")");
             mSerialPortConnection.sendCommandFunction("steering(" + String.valueOf(steering) + ")");
 
-
+            //send to UDP remote host that the command is successful
 
         }
     };

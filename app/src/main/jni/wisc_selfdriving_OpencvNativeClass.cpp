@@ -41,27 +41,6 @@ void publish_points(Mat& img, Points& points, const Vec3b& icolor) {
 
 int toGray(Mat src, Mat& gray)
 {
-
-    /*
-    cvtColor(img, gray, CV_RGBA2GRAY);
-
-    Canny(gray, gray, 50, 200, 3); // Apply canny edge
-    Ptr<LineSegmentDetector> ls = createLineSegmentDetector(LSD_REFINE_STD);
-    double start = double(getTickCount());
-    vector<Vec4f> lines_std;
-    // Detect the lines
-    ls->detect(gray, lines_std);
-    double duration_ms = (double(getTickCount()) - start) * 1000 / getTickFrequency();
-
-    Mat drawnLines(gray);
-    ls->drawSegments(drawnLines, lines_std);
-    gray = drawnLines;
-    if (gray.rows == img.rows && gray.cols == img.cols) {
-        return 1;
-    } else {
-        return 0;
-    }
-    */
     cvtColor( src, gray, COLOR_BGR2GRAY );
     Canny(gray, gray, 200, 400);
 
@@ -87,12 +66,32 @@ int toGray(Mat src, Mat& gray)
     Points cline = detector.getDirectionLine();
     publish_points(test, cline, kLaneWhite);
 
-    gray = test;
-    if (gray.rows == src.rows && gray.cols == src.cols) {
-        return 1;
-    } else {
-        return 0;
-    }
+
+	int leftsum = 0;
+	int rightsum = 0;
+	for(int i = 0; i < cline.size() && i < 20; ++i) {
+		Point point = cline.at(i);
+		if(point.x < center.x) {
+			leftsum++;
+		} else {
+			rightsum++;
+		}
+	}
+    int steering = 0;
+   	int sum = leftsum + rightsum;
+   	if(sum > 6) {
+   		double diff = double(leftsum - rightsum)/sum;
+   		if(diff > 0.3) {
+   			steering = -1;
+   		} else if(diff < -0.3) {
+   			steering = 1;
+   		} else {
+
+   		}
+   	}
+   	gray = test;
+   	return steering;
+
 }
 
 

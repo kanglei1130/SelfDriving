@@ -28,7 +28,17 @@ import wisc.selfdriving.utility.SerialReading;
  * Created by wei on 2/23/17.
  */
 
-
+/**
+ * rotation   0.0 - 1.0 from left to right
+ * rotation(0.5): straight
+ * rotation(0.4): left slightly
+ * rotation(0.6): right slighly
+ *
+ * speed    (0.0)1.0 -  1.2
+ * 0.0 is stop
+ * 1.0 is starting to move, lowest speed
+ * 1.2 is the assigned highest (can be higher) speed
+ */
 public class SerialPortService extends Service {
 
     private final String TAG = "Serial Port Service";
@@ -50,6 +60,9 @@ public class SerialPortService extends Service {
         public int sendCommand(String cmd) {
             if (serialPort != null) {
                 cmd += "\n";
+
+                Log.d(TAG, cmd);
+
                 serialPort.write(cmd.getBytes());
                 return 1;
             } else {
