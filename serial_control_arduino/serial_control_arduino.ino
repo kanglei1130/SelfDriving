@@ -1,6 +1,11 @@
 #include <Servo.h>
 
 
+/**
+ * battery type: LiPo
+ * charging: long press start and then press start (one time)
+ */
+
 Servo throttleOut;
 Servo steeringOut;
 int throttlePin = 5;
