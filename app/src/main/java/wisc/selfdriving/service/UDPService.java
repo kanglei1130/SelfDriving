@@ -1,7 +1,10 @@
 package wisc.selfdriving.service;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.net.wifi.WifiManager;
+import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
@@ -66,7 +69,15 @@ public class UDPService extends Service implements Runnable {
         return START_STICKY;
     }
 
+    WifiManager wifiManager;
+    WifiManager.WifiLock lockHigh;
+
     private void startService() {
+
+        wifiManager = (WifiManager)this.getSystemService(Context.WIFI_SERVICE);
+        lockHigh = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "HIGH_WIFI");
+        lockHigh.acquire();
+
         Log.d(TAG,"Start UDP server");
         try {
             localSocket = new DatagramSocket(localPort);
@@ -88,6 +99,8 @@ public class UDPService extends Service implements Runnable {
         Log.d(TAG,"udpserver connection is closed");
         stopSelf();
         UDPThreadRunning = false;
+
+        lockHigh.release();
     }
 
     //get local ip for smooth user
@@ -149,6 +162,7 @@ public class UDPService extends Service implements Runnable {
 
                 //control speed and turn rotation angle
                 sendUDPServerOrder(command);
+                this.send(sentence);
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -159,6 +173,8 @@ public class UDPService extends Service implements Runnable {
     //send data back to UDPClient
     public void send(String data) {
         Log.d(TAG, "sending:" + data);
+
+        /*
         byte[] sendData = data.getBytes();
         DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, remoteIPAddress, remotePort);
         try {
@@ -167,5 +183,31 @@ public class UDPService extends Service implements Runnable {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+        */
+        String[] params = new String[]{data};
+        UDPSendRequest sendRequest = new UDPSendRequest();
+        sendRequest.execute(params);
     }
+
+
+    private class UDPSendRequest extends AsyncTask<String, Void, String> {
+
+        protected void onPostExecute(String result) {
+            Log.d(TAG, "uploading result:" + result);
+            this.cancel(true);
+        }
+        protected String doInBackground(String... params) {
+            String data = params[0];
+            byte[] sendData = data.getBytes();
+            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, remoteIPAddress, remotePort);
+            try {
+                localSocket.send(sendPacket);
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            return "";
+        }
+    }
+
 }

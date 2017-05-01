@@ -1,11 +1,16 @@
 package wisc.selfdriving.activity;
 
+import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -105,6 +110,16 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         //receive data from UDPService
         LocalBroadcastManager.getInstance(this).registerReceiver(orderMessageReceiver, new IntentFilter("UDPserver"));
 
+
+        int permissionCheck = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        if(permissionCheck == PackageManager.PERMISSION_DENIED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    Manifest.permission.CAMERA, Manifest.permission.CHANGE_WIFI_STATE,
+                    Manifest.permission.WAKE_LOCK
+            }, 1001);
+        }
     }
 
     public void setButtonOnClickListener() {
@@ -178,6 +193,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         if(openVW == false) {
             Log.e(TAG, "open video file failed");
         }
+
     }
 
     @Override
@@ -188,11 +204,22 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
 
+    long sum = 0;
+    int counter = 0;
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         mRgba = inputFrame.rgba();
 
-        //int steering = OpencvNativeClass.convertGray(mRgba.getNativeObjAddr(), mGray.getNativeObjAddr());
+        //38ms to process an image on average
+        //Nexus 5x
+        /*
+        long start = System.currentTimeMillis();
+        int steering = OpencvNativeClass.convertGray(mRgba.getNativeObjAddr(), mGray.getNativeObjAddr());
+        long end = System.currentTimeMillis();
+        sum += (end - start);
+        counter++;
+        Log.d(TAG, "It took " + (end - start) + "ms to process the image" + " average:" + sum/counter);
+        */
 
         /*
         CarControl command = new CarControl();
@@ -324,5 +351,23 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         }
     };
+
+
+
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode) {
+            case 1001: {
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                        && (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                        || ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)) {
+                    Log.d(TAG, "Got permission to use location");
+                }
+            }
+        }
+    }
 
 }

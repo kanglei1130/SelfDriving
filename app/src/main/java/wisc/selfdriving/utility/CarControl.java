@@ -13,10 +13,12 @@ public class CarControl {
      */
     public double speed_;
     public double steering_;
+    public long time_;
 
     public CarControl() {
         this.speed_ = 0.0;
         this.steering_ = 5.0;
+        this.time_ = System.currentTimeMillis();
     }
 
     public void setRelativeControl() {

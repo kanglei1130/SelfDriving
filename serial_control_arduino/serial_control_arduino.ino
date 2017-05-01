@@ -60,6 +60,8 @@ void handleNewLine(String input) {
     } else {
       Serial.println("invalid throttle value");
     }
+  } else if(input.startsWith("time")) {
+    Serial.println(input); 
   } else {
     Serial.println("unknown command");
   } 
@@ -67,7 +69,7 @@ void handleNewLine(String input) {
 
 String buffer = "";
 void loop() {
- if(Serial.available()) {
+  if(Serial.available()) {
      String input = Serial.readString();//read input
      buffer += input;
      //separte by '\n'
@@ -85,10 +87,10 @@ void loop() {
   buttonState = digitalRead(12);
   if(buttonState != lastButtonState) {
     if(buttonState==1 && lastButtonState==0){
-    Serial.println("rotation(1.0)");
-      }
+      Serial.println("rotation(1.0)");
     }
-   else {
-    }
-    lastButtonState = buttonState;
+  } else {
+
+  }
+  lastButtonState = buttonState;
 }
