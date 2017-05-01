@@ -11,6 +11,7 @@ import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 import android.os.Binder;
 import android.os.IBinder;
+import android.os.SystemClock;
 import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
@@ -60,13 +61,14 @@ public class SerialPortService extends Service {
         public int sendCommand(String cmd) {
             if (serialPort != null) {
                 cmd += "\n";
+                //serialPort.write(cmd.getBytes());
 
-                Log.d(TAG, cmd);
+                String newcmd = "time(" + System.currentTimeMillis() + ")\n";
+                serialPort.write(newcmd.getBytes());
 
-                serialPort.write(cmd.getBytes());
                 return 1;
             } else {
-                Log.d(TAG, cmd + " serialPort is null");
+                //Log.d(TAG, cmd + " serialPort is null");
                 return -1;
             }
         }
@@ -123,7 +125,6 @@ public class SerialPortService extends Service {
         }
         isRunning_.set(true);
         registerReceiver();
-        sendHallData(0.00,rotationNumber);
     }
 
     //Defining a Callback which triggers whenever data is read.
@@ -138,7 +139,7 @@ public class SerialPortService extends Service {
                     int newline = buffer.indexOf("\n");
                     String command = buffer.substring(0, newline);
                     buffer = buffer.substring(newline + 1);
-                    detectRotation(command);
+                    parseSerialMessage(command);
                 }
             } catch (UnsupportedEncodingException e) {
                 e.printStackTrace();
@@ -186,15 +187,24 @@ public class SerialPortService extends Service {
      * @return
      */
     //detect the Halldata and current rotation number
-    private int detectRotation(String data){
+    private void parseSerialMessage(String data){
         if (data.contains("rotation(1.0)")) {
             rotationNumber++;
             double speed = calculateSpeed(rotationNumber);
             Log.d(TAG, "No."+rotationNumber + " rotation detected");
             Log.d(TAG, "Speed of this rotation is " + String.valueOf(speed));
-            sendHallData(speed,rotationNumber);
+
+            long time = System.currentTimeMillis();
+            //sendSerialMessage(speed,rotationNumber, time);
+        } else if(data.contains("time")) {
+            int s = data.indexOf('(');
+            int e = data.indexOf(')');
+            long time = Long.valueOf(data.substring(s + 1, e));
+            double speed = calculateSpeed(rotationNumber);
+            sendSerialMessage(speed, rotationNumber, time);
+        } else {
+            Log.e(TAG, "Invalid Serial Message:" + data);
         }
-        return rotationNumber;
     }
 
     //calculate the average speed for each rotation
@@ -206,14 +216,18 @@ public class SerialPortService extends Service {
     }
 
     //send the Halldata(current rotation number and speed) to main
-    private void sendHallData(double speed, int rotation) {
+    private void sendSerialMessage(double speed, int rotation, long time) {
 
-        SerialReading obj = new SerialReading(speed, rotation);
+        SerialReading obj = new SerialReading(speed, rotation, time);
         Gson gson = new Gson();
         String json = gson.toJson(obj);
 
+        long now = System.currentTimeMillis();
+        long rrt =  now - time;
+        Log.d(TAG, "now: " + now + " RRT:" + rrt);
+        Log.d(TAG, json);
         Intent intent = new Intent("SerialPort");
-        intent.putExtra("speedAndRotation", json);
+        intent.putExtra("serialMessage", json);
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 

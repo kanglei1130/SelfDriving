@@ -25,6 +25,10 @@ public class SerialPortConnection implements ServiceConnection {
 
     //send command from main to serialPort
     public int sendCommandFunction(String cmd) {
-        return binder.sendCommand(cmd);
+        if(binder!=null) {
+            return binder.sendCommand(cmd);
+        } else {
+            return -1;
+        }
     }
 };

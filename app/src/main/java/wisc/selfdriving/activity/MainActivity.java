@@ -8,6 +8,7 @@ import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -210,16 +211,27 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         mRgba = inputFrame.rgba();
 
+        if(mSerialPortConnection != null && counter%50==0) {
+            long start = System.currentTimeMillis();
+            int ret = mSerialPortConnection.sendCommandFunction("time(" + String.valueOf(System.currentTimeMillis()) + ")");
+            long end = System.currentTimeMillis();
+
+            if(ret != -1) {
+                sum += (end - start);
+                counter++;
+                //Log.d(TAG, "It took " + (end - start) + "ms to process the image" + " average:" + sum / counter);
+            }
+        }
+        counter++;
         //38ms to process an image on average
         //Nexus 5x
-        /*
-        long start = System.currentTimeMillis();
+
+        //long start = System.currentTimeMillis();
         int steering = OpencvNativeClass.convertGray(mRgba.getNativeObjAddr(), mGray.getNativeObjAddr());
-        long end = System.currentTimeMillis();
-        sum += (end - start);
-        counter++;
-        Log.d(TAG, "It took " + (end - start) + "ms to process the image" + " average:" + sum/counter);
-        */
+        //long end = System.currentTimeMillis();
+        //sum += (end - start);
+        //counter++;
+        //Log.d(TAG, "It took " + (end - start) + "ms to process the image" + " average:" + sum/counter);
 
         /*
         CarControl command = new CarControl();
@@ -300,13 +312,15 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         public void onReceive(Context context, Intent intent) {
 
             //get rotation and speed data from USBSerial
-            String speedAndRotation = intent.getStringExtra("speedAndRotation");
+            String speedAndRotation = intent.getStringExtra("serialMessage");
             Gson gson = new Gson();
             SerialReading reading = gson.fromJson(speedAndRotation, SerialReading.class);
 
             //rotation status and send back to UDP service
             rotation = reading.rotation_;
-            mUDPConnection.sendData(String.valueOf(rotation));
+            long time = reading.time_;
+            long rrt = System.currentTimeMillis() - time;
+            Log.d(TAG, "RRT:" + rrt);
         }
     };
 

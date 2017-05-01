@@ -69,7 +69,7 @@ void handleNewLine(String input) {
 
 String buffer = "";
 void loop() {
-  if(Serial.available()) {
+  while(Serial.available() > 0) {
      String input = Serial.readString();//read input
      buffer += input;
      //separte by '\n'
