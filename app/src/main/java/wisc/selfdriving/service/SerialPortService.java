@@ -40,7 +40,7 @@ import wisc.selfdriving.utility.SerialReading;
  * 1.0 is starting to move, lowest speed
  * 1.2 is the assigned highest (can be higher) speed
  */
-public class SerialPortService extends Service {
+public class SerialPortService extends Service implements Runnable {
 
     private final String TAG = "Serial Port Service";
     public final String ACTION_USB_PERMISSION = "wisc.selfdriving.arduinousb.USB_PERMISSION";
@@ -50,6 +50,9 @@ public class SerialPortService extends Service {
     UsbDeviceConnection connection;
     int rotationNumber = 0;
     double previousTime = 0.00;
+
+    //sync mode: user syncWrite, syncRead, syncOpen and SyncClose
+    boolean serialSync = true;
 
     private final Binder binder_ = new SerialBinder();
     private AtomicBoolean isRunning_ = new AtomicBoolean(false);
@@ -61,12 +64,13 @@ public class SerialPortService extends Service {
         public int sendCommand(String cmd) {
             if (serialPort != null) {
                 cmd += "\n";
-                //serialPort.write(cmd.getBytes());
-
-                String newcmd = "time(" + System.currentTimeMillis() + ")\n";
-                serialPort.write(newcmd.getBytes());
-
-                return 1;
+                int res = 1;
+                if(serialSync) {
+                    res = serialPort.syncWrite(cmd.getBytes(), 0);
+                } else {
+                    serialPort.write(cmd.getBytes());
+                }
+                return res;
             } else {
                 //Log.d(TAG, cmd + " serialPort is null");
                 return -1;
@@ -100,7 +104,11 @@ public class SerialPortService extends Service {
         }
 
         if (serialPort != null) {
-            serialPort.close();
+            if(serialSync) {
+                serialPort.syncClose();
+            } else {
+                serialPort.close();
+            }
         }
         isRunning_.set(false);
         stopSelf();
@@ -124,7 +132,35 @@ public class SerialPortService extends Service {
             Log.e(TAG, "usb device list is empty");
         }
         isRunning_.set(true);
+
+        if(serialSync) {
+            Thread curThread = new Thread(this);
+            curThread.start();
+        }
         registerReceiver();
+    }
+
+    //only run under sync mode
+    public void run() {
+        String buffer = "";
+        while(isRunning_.get() && serialSync) {
+            byte[] tmp = new byte[1024];
+            if(serialPort == null) {
+                continue;
+            }
+            int recv =  serialPort.syncRead(tmp, 0);
+            if(recv == -1) {
+                continue;
+            }
+            String cur = new String(tmp);
+            buffer += cur.substring(0, recv);
+            while(buffer.contains("\n")) {
+                int newline = buffer.indexOf("\n");
+                String command = buffer.substring(0, newline);
+                buffer = buffer.substring(newline + 1);
+                parseSerialMessage(command);
+            }
+        }
     }
 
     //Defining a Callback which triggers whenever data is read.
@@ -134,6 +170,7 @@ public class SerialPortService extends Service {
         public void onReceivedData(byte[] arg0) {
             try {
                 String data = new String(arg0, "UTF-8");
+                Log.d(TAG, "receive from serial port:" + data);
                 buffer += data;
                 while(buffer.contains("\n")) {
                     int newline = buffer.indexOf("\n");
@@ -159,7 +196,7 @@ public class SerialPortService extends Service {
                     serialPort = UsbSerialDevice.createUsbSerialDevice(device, connection);
                     if (serialPort != null) {
                         Log.d(TAG,"serialPort is not null in onReceive ");
-                        if (serialPort.open()) { //Set Serial Connection Parameters.
+                        if (serialSync?serialPort.syncOpen():serialPort.open()) { //Set Serial Connection Parameters.
                             serialPort.setBaudRate(115200);
                             serialPort.setDataBits(UsbSerialInterface.DATA_BITS_8);
                             serialPort.setStopBits(UsbSerialInterface.STOP_BITS_1);

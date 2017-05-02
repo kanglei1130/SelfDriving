@@ -136,7 +136,7 @@ void LaneMarkerDetector::laneMarkerDetector(Mat& img, Mat& src, Mat& temp)
 {
 	int cols = img.cols;
 	int rows = img.rows;
-	int start = rows * 3/4;
+	int start = rows * 1/4;
 	int end = rows;
 
 	//cout<<start<<","<<end<<endl;
