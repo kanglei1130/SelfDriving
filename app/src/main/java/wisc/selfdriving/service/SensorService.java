@@ -11,9 +11,10 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
-import wisc.selfdriving.utility.Trace;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import wisc.selfdriving.utility.Trace;
 
 public class SensorService extends Service implements LocationListener {
 

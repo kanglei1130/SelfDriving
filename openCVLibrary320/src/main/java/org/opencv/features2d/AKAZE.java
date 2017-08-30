@@ -4,8 +4,6 @@
 //
 package org.opencv.features2d;
 
-import org.opencv.features2d.Feature2D;
-
 // C++: class AKAZE
 //javadoc: AKAZE
 public class AKAZE extends Feature2D {

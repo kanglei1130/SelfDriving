@@ -4,7 +4,6 @@
 //
 package org.opencv.features2d;
 
-import java.util.ArrayList;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfKeyPoint;
 

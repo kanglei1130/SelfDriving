@@ -4,8 +4,6 @@
 //
 package org.opencv.features2d;
 
-import org.opencv.features2d.Feature2D;
-
 // C++: class ORB
 //javadoc: ORB
 public class ORB extends Feature2D {

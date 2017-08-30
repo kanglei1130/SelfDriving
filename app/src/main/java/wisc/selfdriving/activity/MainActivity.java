@@ -4,20 +4,19 @@ import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
-import android.content.IntentFilter;
-import android.support.v4.content.LocalBroadcastManager;
 import android.widget.Button;
 
 import com.google.gson.Gson;
@@ -44,9 +43,10 @@ import wisc.selfdriving.service.UDPService;
 import wisc.selfdriving.service.UDPServiceConnection;
 import wisc.selfdriving.utility.CarControl;
 import wisc.selfdriving.utility.Constants;
-import wisc.selfdriving.utility.ImagePayload;
-import wisc.selfdriving.utility.JsonWrapper;
+import wisc.selfdriving.utility.ImageWrapper;
 import wisc.selfdriving.utility.SerialReading;
+
+import static junit.framework.Assert.assertTrue;
 
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
@@ -148,7 +148,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
 
-
     protected void onPause() {
         super.onPause();
         if (javaCameraView != null) {
@@ -182,7 +181,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         mRgba = new Mat(height, width, CvType.CV_8UC4);
         mGray = new Mat(height, width, CvType.CV_8UC4);
 
-        imageProcess = new ImageProcess(1.0, width, height);
+        imageProcess = new ImageProcess(0.2, width, height);
 
         File videoDir = new File(Constants.kVideoFolder);
         if(!videoDir.exists()) {
@@ -194,7 +193,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         if(openVW == false) {
             Log.e(TAG, "open video file failed");
         }
-
     }
 
     @Override
@@ -240,24 +238,26 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         updateCarControl(command);
         */
 
-        //videoWriter.write(mRgba);
-
-        //get encoded image and send to server
-
-        /*
+        ////////////////////////////////////////////////////////
+        //write video to frames and encode frame to Mat byte then to BufArray, finally to String
+        videoWriter.write(mRgba);
         MatOfByte buf = imageProcess.getCompressedData(mRgba);
-        ImagePayload imagePayload = new ImagePayload(buf);
-        JsonWrapper jsonWrapper = new JsonWrapper(JsonWrapper.IMAGE, imagePayload);
+        byte[] bytes_ = buf.toArray();
+        String imgBufString = ImageProcess.Base64Encode(bytes_);
+        ImageWrapper imageWrapper = new ImageWrapper(ImageWrapper.IMAGE, imgBufString);
 
         if(mUDPConnection != null) {
             long start = System.currentTimeMillis();
-            mUDPConnection.sendData(gson.toJson(jsonWrapper));
+            Gson gson = new Gson();
+            mUDPConnection.sendData(gson.toJson(imageWrapper));
             long end = System.currentTimeMillis();
             Log.d(TAG, "It took " + (end - start) + "ms to process the image");
         }
-        */
+        //////////////////////////////////////////////////
         return mGray;
     }
+
+
 
     //initial SerialPortConnection
     private static Intent mSerial = null;
@@ -324,50 +324,28 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
     };
 
-    /**
-     * current car control status
-     */
-    private CarControl carControl = new CarControl();
-
-    private void updateCarControl(CarControl command) {
-        carControl.speed_ += command.speed_;
-        carControl.steering_ += command.steering_;
-
-        carControl.speed_ = Math.max(carControl.speed_, 0);
-        carControl.speed_ = Math.min(carControl.speed_, 10);
-
-        carControl.steering_ = Math.max(carControl.steering_, 0);
-        carControl.steering_ = Math.min(carControl.steering_, 10);
-    }
 
     //receive data from UDPService
     private BroadcastReceiver orderMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-
-            //get order from UDPService
+            //get order from UDPService and send it to serialport
             String getOrder = intent.getStringExtra("order");
             Gson gson = new Gson();
-            CarControl command = gson.fromJson(getOrder, CarControl.class);
-            updateCarControl(command);
-
-            //detect order from UDPService and move as order
-            double throttle = 0.0;
-            if(carControl.speed_ != 0) {
-                throttle = carControl.speed_ * 0.02 + 1.0;
+            //Log.d(TAG,"getOrder: " + getOrder);
+            CarControl controller = gson.fromJson(getOrder,CarControl.class);
+            if (controller != null) {
+                float throttle = (float)0.0;
+                float steering = controller.steering_;
+                if(controller.throttle_ > 0.5) {
+                    throttle = (float) ((controller.throttle_-0.5) * 0.4 + 1.0);
+                }
+                mSerialPortConnection.sendCommandFunction("throttle(" + String.valueOf(throttle) + ")");
+                mSerialPortConnection.sendCommandFunction("steering(" + String.valueOf(steering) + ")");
             }
-            double steering = carControl.steering_ / 10.0;
-
-            mSerialPortConnection.sendCommandFunction("throttle(" + String.valueOf(throttle) + ")");
-            mSerialPortConnection.sendCommandFunction("steering(" + String.valueOf(steering) + ")");
-
             //send to UDP remote host that the command is successful
-
         }
     };
-
-
-
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {

@@ -10,9 +10,6 @@ import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -22,21 +19,19 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
 
-import wisc.selfdriving.utility.CarControl;
-
 public class UDPService extends Service implements Runnable {
 
     private static final String TAG = "UDPService";
-    //UDPServer udpserver = new UDPServer();
     private final Binder binder_ = new UDPService.UDPBinder();
     public String localIP = "";
     public String order = "";
     public String rotation = "0";
     public DatagramSocket localSocket = null;
     public InetAddress remoteIPAddress = null;
-    public int remotePort = 4444;
+    public int remotePort = 5000;
     public int localPort = 55555;
-    String remoteIPName = "192.168.1.100";
+    //this IP need to be changed if you change your WiFi connection
+    String remoteIPName = "192.168.10.103";
     private Boolean UDPThreadRunning = null;
     CarControl control;
 
@@ -48,7 +43,6 @@ public class UDPService extends Service implements Runnable {
             rotation = n;
             send(n);
         }
-
         public String getOrder(){
             return order;
         }
@@ -90,7 +84,7 @@ public class UDPService extends Service implements Runnable {
             e.printStackTrace();
         }
         (new Thread(this)).start();
-        send("UDPServiceSever send: ");
+        //send("UDPServiceSever send: ");
     }
 
 
@@ -103,7 +97,7 @@ public class UDPService extends Service implements Runnable {
         lockHigh.release();
     }
 
-    //get local ip for smooth user
+    //get local ip for smoothing user
     private String getIpAddress() {
         String ip = "";
         try {
@@ -130,14 +124,23 @@ public class UDPService extends Service implements Runnable {
     }
 
     //send order achieved from UDP client to main
-    private void sendUDPServerOrder(CarControl control) {
+    /*private void sendUDPServerOrder(CarControl control) {
 
         Gson gson = new Gson();
         String json = gson.toJson(control);
         Intent intent = new Intent("UDPserver");
         intent.putExtra("order", json);
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+    }*/
+/////////////////////////////////////////////////////////////////////////////
+    //send order achieved from UDP client directly to main without transfer it to json
+    private void sendUDPServerOrder(String string) {
+
+        Intent intent = new Intent("UDPserver");
+        intent.putExtra("order", string);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
+//////////////////////////////////////////////////////////////////////////////////
 
     public void run() {
         control = new CarControl();
@@ -145,24 +148,42 @@ public class UDPService extends Service implements Runnable {
         Log.d(TAG, "start receiving thread");
         byte[] receiveData = new byte[1024];
         UDPThreadRunning = true;
+        String duplicater = "";
         while (UDPThreadRunning.booleanValue()) {
             DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
             try {
                 localSocket.receive(receivePacket);
                 String sentence = new String(receiveData, 0, receivePacket.getLength());
-                Log.d(TAG, "RECEIVED: " + sentence);
 
                 //get UDPClient ip and port
                 remoteIPAddress = receivePacket.getAddress();
                 remotePort = receivePacket.getPort();
 
-                //receive gson data from UDPClient
+/*                //receive gson data from UDPClient
                 Gson gson = new GsonBuilder().create();
                 CarControl command = gson.fromJson(sentence, CarControl.class);
+q
+                control speed and turn rotation angle
+                sendUDPServerOrder(command);*/
 
-                //control speed and turn rotation angle
-                sendUDPServerOrder(command);
-                this.send(sentence);
+                //////////////////////////////////////////////////////
+                //if received changed commend, then send it to main
+                Log.d(TAG,sentence);
+                if (duplicater != sentence && sentence.contains("steering")) {
+                    sendUDPServerOrder(sentence);
+                    duplicater = sentence;
+                } else if (sentence.contains("length")){
+                    double imageSize = Double.parseDouble(sentence.substring(sentence.indexOf(":")+1))/1024;
+                    long sentTime = Long.parseLong(sentence.substring(sentence.indexOf("-")+1,sentence.indexOf(",")-1));
+                    long tranTime = System.currentTimeMillis()-sentTime;
+                    Log.d(TAG,"IMAGE return back infor: " + sentence);
+                    Log.d(TAG,"Image size is: " + imageSize + "KB, transmission time is: " + tranTime);
+                } else{
+                }
+
+                /////////////////////////////////////////////////////
+
+                //this.send(sentence);
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -172,10 +193,9 @@ public class UDPService extends Service implements Runnable {
 
     //send data back to UDPClient
     public void send(String data) {
-        Log.d(TAG, "sending:" + data);
 
-        /*
         byte[] sendData = data.getBytes();
+        Log.d(TAG,String.valueOf(remoteIPAddress));
         DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, remoteIPAddress, remotePort);
         try {
             localSocket.send(sendPacket);
@@ -183,7 +203,7 @@ public class UDPService extends Service implements Runnable {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-        */
+
         String[] params = new String[]{data};
         UDPSendRequest sendRequest = new UDPSendRequest();
         sendRequest.execute(params);

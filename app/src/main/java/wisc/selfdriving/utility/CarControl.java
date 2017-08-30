@@ -1,27 +1,21 @@
 package wisc.selfdriving.utility;
 
 /**
- * Created by wei on 4/18/17.
+ * Created by wei on 8/11/17.
  */
 
-//make order as object in order to send from UDPService to main
+/**
+ * speed and steering are both direct from controller
+ */
 public class CarControl {
 
-    /**
-     * speed is from 0.0 to 10.0
-     * steering is from 0.0  to 10.0, 5.0 by default
-     */
-    public double speed_;
-    public double steering_;
+    public float throttle_;
+    public float steering_;
     public long time_;
 
     public CarControl() {
-        this.speed_ = 0.0;
-        this.steering_ = 5.0;
+        this.throttle_ = (float) 0.0;
+        this.steering_ = (float) 0.0;
         this.time_ = System.currentTimeMillis();
-    }
-
-    public void setRelativeControl() {
-        this.steering_ = 0;
     }
 }

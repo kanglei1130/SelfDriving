@@ -4,8 +4,6 @@
 //
 package org.opencv.features2d;
 
-import org.opencv.features2d.Feature2D;
-
 // C++: class FastFeatureDetector
 //javadoc: FastFeatureDetector
 public class FastFeatureDetector extends Feature2D {

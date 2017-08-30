@@ -11,13 +11,14 @@ import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 import android.os.Binder;
 import android.os.IBinder;
-import android.os.SystemClock;
 import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
+
 import com.felhr.usbserial.UsbSerialDevice;
 import com.felhr.usbserial.UsbSerialInterface;
 import com.google.gson.Gson;
+
 import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Map;
@@ -90,6 +91,7 @@ public class SerialPortService extends Service implements Runnable {
 
     //auto start
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d(TAG, "Start command called on Service");
         startService();
         return START_STICKY;
     }
