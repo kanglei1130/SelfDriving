@@ -55,8 +55,6 @@ public class ImageProcess {
         return buf;
     }
 
-
-
     public static String Base64Encode(byte[] in){
         StringBuilder out = new StringBuilder((in.length * 4) / 3);
         int b;
