@@ -136,7 +136,7 @@ void LaneMarkerDetector::laneMarkerDetector(Mat& img, Mat& src, Mat& temp)
 {
 	int cols = img.cols;
 	int rows = img.rows;
-	int start = rows * 1/4;
+	int start = 0;
 	int end = rows;
 
 	//cout<<start<<","<<end<<endl;
@@ -147,9 +147,11 @@ void LaneMarkerDetector::laneMarkerDetector(Mat& img, Mat& src, Mat& temp)
 				img.at<unsigned char>(x, y) = 0;
 			} else {
 				//draw a white line in the middle, as the forwarding direction of the car
+				/*
 				if(y == cols/2) {
 					img.at<unsigned char>(x, y) = 255;
 				}
+				*/
 			}
 		}
 	}

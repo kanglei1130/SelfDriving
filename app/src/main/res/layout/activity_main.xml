@@ -16,7 +16,7 @@
         >
         <Button
             android:text="start"
-            android:textColor="#FFFFFF"
+            android:textColor="#555555"
             android:textSize="32sp"
             android:layout_width="match_parent"
             android:layout_height="0px"
@@ -24,8 +24,8 @@
             android:id="@+id/btnstart"/>
             />
         <Button
-            android:text="test"
-            android:textColor="#FFFFFF"
+            android:text="menu"
+            android:textColor="#555555"
             android:textSize="32sp"
             android:layout_width="match_parent"
             android:layout_height="0px"

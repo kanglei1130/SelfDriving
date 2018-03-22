@@ -189,6 +189,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
         videoWriter = new VideoWriter();
         String file = Constants.kVideoFolder.concat("test.avi");
+        // Android OpenCV support MJPG only
         boolean openVW = videoWriter.open(file, VideoWriter.fourcc('M','J','P','G'), 10.0, new Size(width, height));
         if(openVW == false) {
             Log.e(TAG, "open video file failed");
@@ -209,6 +210,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         mRgba = inputFrame.rgba();
 
+        /*
         if(mSerialPortConnection != null && counter%50==0) {
             long start = System.currentTimeMillis();
             int ret = mSerialPortConnection.sendCommandFunction("time(" + String.valueOf(System.currentTimeMillis()) + ")");
@@ -221,6 +223,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             }
         }
         counter++;
+        */
         //38ms to process an image on average
         //Nexus 5x
 
@@ -240,6 +243,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         ////////////////////////////////////////////////////////
         //write video to frames and encode frame to Mat byte then to BufArray, finally to String
+
         videoWriter.write(mRgba);
         MatOfByte buf = imageProcess.getCompressedData(mRgba);
         byte[] bytes_ = buf.toArray();
