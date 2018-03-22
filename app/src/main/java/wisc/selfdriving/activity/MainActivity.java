@@ -28,25 +28,15 @@ import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.core.MatOfByte;
-import org.opencv.core.Size;
-import org.opencv.videoio.VideoWriter;
-
-import java.io.File;
 
 import wisc.selfdriving.OpencvNativeClass;
 import wisc.selfdriving.R;
-import wisc.selfdriving.imageprocess.ImageProcess;
 import wisc.selfdriving.service.SerialPortConnection;
 import wisc.selfdriving.service.SerialPortService;
-import wisc.selfdriving.service.UDPService;
-import wisc.selfdriving.service.UDPServiceConnection;
 import wisc.selfdriving.utility.CarControl;
 import wisc.selfdriving.utility.Constants;
-import wisc.selfdriving.utility.ImageWrapper;
 import wisc.selfdriving.utility.SerialReading;
 
-import static junit.framework.Assert.assertTrue;
 
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
@@ -55,8 +45,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     Button startButton,testButton;
     JavaCameraView javaCameraView;
 
-    VideoWriter videoWriter = null;
-    private ImageProcess imageProcess = null;
     Mat mRgba, mGray;
 
     public int rotation = 0;
@@ -108,8 +96,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
 
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter("SerialPort"));
-        //receive data from UDPService
-        LocalBroadcastManager.getInstance(this).registerReceiver(orderMessageReceiver, new IntentFilter("UDPserver"));
 
 
         int permissionCheck = ContextCompat.checkSelfPermission(this,
@@ -128,7 +114,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             @Override
             public void onClick(View v) {
                 startButton.setEnabled(false);
-                startUDPService();
                 //control the button activity
                 startSerialService();
             }
@@ -161,10 +146,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             javaCameraView.disableView();
         }
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver);
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(orderMessageReceiver);
 
         stopSerialService();
-        stopUDPService();
     }
 
     protected void onResume() {
@@ -180,27 +163,12 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public void onCameraViewStarted(int width, int height) {
         mRgba = new Mat(height, width, CvType.CV_8UC4);
         mGray = new Mat(height, width, CvType.CV_8UC4);
-
-        imageProcess = new ImageProcess(0.2, width, height);
-
-        File videoDir = new File(Constants.kVideoFolder);
-        if(!videoDir.exists()) {
-            videoDir.mkdir();
-        }
-        videoWriter = new VideoWriter();
-        String file = Constants.kVideoFolder.concat("test.avi");
-        // Android OpenCV support MJPG only
-        boolean openVW = videoWriter.open(file, VideoWriter.fourcc('M','J','P','G'), 10.0, new Size(width, height));
-        if(openVW == false) {
-            Log.e(TAG, "open video file failed");
-        }
     }
 
     @Override
     public void onCameraViewStopped() {
         Log.d(TAG, "onCameraViewStopped");
         mRgba.release();
-        videoWriter.release();
     }
 
 
@@ -241,23 +209,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         updateCarControl(command);
         */
 
-        ////////////////////////////////////////////////////////
-        //write video to frames and encode frame to Mat byte then to BufArray, finally to String
-
-        videoWriter.write(mRgba);
-        MatOfByte buf = imageProcess.getCompressedData(mRgba);
-        byte[] bytes_ = buf.toArray();
-        String imgBufString = ImageProcess.Base64Encode(bytes_);
-        ImageWrapper imageWrapper = new ImageWrapper(ImageWrapper.IMAGE, imgBufString);
-
-        if(mUDPConnection != null) {
-            long start = System.currentTimeMillis();
-            Gson gson = new Gson();
-            mUDPConnection.sendData(gson.toJson(imageWrapper));
-            long end = System.currentTimeMillis();
-            Log.d(TAG, "It took " + (end - start) + "ms to process the image");
-        }
-        //////////////////////////////////////////////////
         return mGray;
     }
 
@@ -289,26 +240,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
     }
 
-    //initial UDPConnetion
-    private static Intent mUDP = null;
-    private static UDPServiceConnection mUDPConnection = null;
-
-    private void startUDPService() {
-        Log.d(TAG, "startUDPService");
-        mUDP = new Intent(this, UDPService.class);
-        mUDPConnection = new UDPServiceConnection();
-        bindService(mUDP, mUDPConnection, Context.BIND_AUTO_CREATE);
-        startService(mUDP);
-    }
-
-    private void stopUDPService() {
-        if(mUDP != null && mUDPConnection != null) {
-            unbindService(mUDPConnection);
-            stopService(mUDP);
-            mUDP = null;
-            mUDPConnection = null;
-        }
-    }
 
     //receive data from USBSerial
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
@@ -328,28 +259,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
     };
 
-
-    //receive data from UDPService
-    private BroadcastReceiver orderMessageReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            //get order from UDPService and send it to serialport
-            String getOrder = intent.getStringExtra("order");
-            Gson gson = new Gson();
-            //Log.d(TAG,"getOrder: " + getOrder);
-            CarControl controller = gson.fromJson(getOrder,CarControl.class);
-            if (controller != null) {
-                float throttle = (float)0.0;
-                float steering = controller.steering_;
-                if(controller.throttle_ > 0.5) {
-                    throttle = (float) ((controller.throttle_-0.5) * 0.4 + 1.0);
-                }
-                mSerialPortConnection.sendCommandFunction("throttle(" + String.valueOf(throttle) + ")");
-                mSerialPortConnection.sendCommandFunction("steering(" + String.valueOf(steering) + ")");
-            }
-            //send to UDP remote host that the command is successful
-        }
-    };
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {

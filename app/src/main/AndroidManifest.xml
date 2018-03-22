@@ -71,10 +71,6 @@
             android:name=".service.SerialPortService"
             android:enabled="true"
             android:exported="true" />
-        <service
-            android:name=".service.UDPService"
-            android:enabled="true"
-            android:exported="true"></service>
     </application>
 
 </manifest>
