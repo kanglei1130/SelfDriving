@@ -171,9 +171,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         mRgba.release();
     }
 
-
-    long sum = 0;
-    int counter = 0;
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         mRgba = inputFrame.rgba();
