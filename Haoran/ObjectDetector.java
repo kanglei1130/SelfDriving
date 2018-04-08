@@ -3,6 +3,8 @@ import java.util.ArrayList;
 import org.opencv.core.*;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.objdetect.CascadeClassifier;
+
 import static org.opencv.core.Core.absdiff;
 import static org.opencv.core.Core.sumElems;
 import static org.opencv.core.CvType.CV_32F;
@@ -22,6 +24,13 @@ public class ObjectDetector {
     public static int greenlight_THRESHOLD = 5500;
     public static int leftturn_THRESHOLD = 5000;
     public static int rightturn_THRESHOLD = 5000;
+
+    public static String stopsign_xml = "C:\\Users\\HAORAN\\Desktop\\stop_sign.xml";
+    public static String redlight_xml = "C:\\Users\\HAORAN\\Desktop\\red_light.xml";
+    public static String greenlight_xml = "C:\\Users\\HAORAN\\Desktop\\green_light.xml";
+    public static String trafficlight_xml = "C:\\Users\\HAORAN\\Desktop\\traffic_light.xml";
+    public static String leftturn_xml = "C:\\Users\\HAORAN\\Desktop\\left_turn.xml";
+    public static String rightturn_xml = "C:\\Users\\HAORAN\\Desktop\\right_turn.xml";
 
     /* Computes Mean Square Error between two n-d matrices. */
     /* Lower value means more similar. */
@@ -45,7 +54,7 @@ public class ObjectDetector {
          - 4 for left-turn-sign,
          - 5 for right-turn-sign
     */
-    public static int detectObjects(String obj_address) {
+    public static int detectObjects_MSE(String obj_address) {
         // set thresholds
         ArrayList<Integer> thresholds = new ArrayList<Integer>();
         thresholds.add(stopsign_THRESHOLD);
@@ -71,7 +80,7 @@ public class ObjectDetector {
         Imgproc.resize(targetImage, targetImage, new Size(width, height));
         System.out.println("Analyzing ... ...");
 
-        for (int i = 0; i < addresses.size(); i++) {
+        for (int i = addresses.size()-1; i >= 0; i--) {
             // read prototype image
             Mat prototypeImg = Imgcodecs.imread(addresses.get(i), Imgcodecs.IMREAD_COLOR);
             System.out.println("Loading prototype image: " + addresses.get(i));
@@ -80,7 +89,7 @@ public class ObjectDetector {
             Mat tmpImg = prototypeImg.clone();
             double ratio = (double)tmpImg.rows() / tmpImg.cols();
             Mat window;
-            for (double wsize = tmpImg.cols(); wsize > 15;) {
+            for (double wsize = tmpImg.cols(); wsize > 20;) {
                 if (tmpImg.rows() < 18 || tmpImg.cols() < 18)
                     break;
                 if (tmpImg.rows() > 400 || tmpImg.cols() > 400) {
@@ -89,8 +98,8 @@ public class ObjectDetector {
                     continue;
                 }
 
-                for (int y = 0; y < targetImage.rows(); y += 7) {
-                    for (int x = 0; x < targetImage.cols(); x += 7) {
+                for (int y = 0; y < targetImage.rows(); y += 8) {
+                    for (int x = 0; x < targetImage.cols(); x += 8) {
                         if (x + tmpImg.cols() >= targetImage.cols() || y + tmpImg.rows() >= targetImage.rows())
                             continue;
                         Rect R = new Rect(x, y, tmpImg.cols(), tmpImg.rows()); // create a rectangle
@@ -104,11 +113,61 @@ public class ObjectDetector {
                 wsize /= 1.5;
                 Imgproc.resize(tmpImg, tmpImg, new Size(wsize, wsize * ratio));
             }
+            System.out.println("min MSE: " + minMSE);
             if (minMSE < thresholds.get(i)) {
                 return i + 1;
             }
         }
         return 0;
+    }
+
+    public static int detectObjects_CASCADE(String obj_address) {
+        // target image
+        System.out.println("Read image from: " + obj_address);
+        Mat targetImage = Imgcodecs.imread(obj_address, Imgcodecs.IMREAD_COLOR);
+
+        CascadeClassifier stopSignDetector = new CascadeClassifier(stopsign_xml);
+        MatOfRect targetVectors = new MatOfRect();
+        double[] rgb;
+        stopSignDetector.detectMultiScale(targetImage, targetVectors);
+        if (targetVectors.toArray().length > 0)
+            return 1;
+        else
+            System.out.println("No stop sign found!");
+
+        CascadeClassifier redLightDetector = new CascadeClassifier(trafficlight_xml);
+        targetVectors = new MatOfRect();
+        redLightDetector.detectMultiScale(targetImage, targetVectors);
+        for (Rect rect : targetVectors.toArray()) {
+            // Imgproc.rectangle(targetImage, new Point(rect.x, rect.y), new Point(rect.x + rect.width, rect.y + rect.height), new Scalar(0, 255, 0));
+            // Imgcodecs.imwrite("C:\\Users\\HAORAN\\Desktop\\output.png", targetImage);
+            for (int x = rect.x; x+3 < rect.x+rect.width; x += 3) {
+                for (int y = rect.y; y+3 < rect.y+rect.height; y+= 3) {
+                    rgb = targetImage.get(x, y);
+                    if (rgb == null)
+                        continue;
+                    if (rgb[0] - rgb[1] > 40)
+                        return 2;
+                    else if (rgb[1] - rgb[0] > 40)
+                        return 3;
+                }
+            }
+        }
+        /*
+        CascadeClassifier leftTurnDetector = new CascadeClassifier(leftturn_xml);
+        targetVectors = new MatOfRect();
+        leftTurnDetector.detectMultiScale(targetImage, targetVectors);
+        if (targetVectors.toArray().length > 0)
+            return 4;
+
+        CascadeClassifier rightTurnDetector = new CascadeClassifier(rightturn_xml);
+        targetVectors = new MatOfRect();
+        rightTurnDetector.detectMultiScale(targetImage, targetVectors);
+        if (targetVectors.toArray().length > 0)
+            return 5;
+        */
+
+        return 0; // nothing find
     }
 
     public static void main(String [] args) {
@@ -123,11 +182,12 @@ public class ObjectDetector {
         System.out.println("Right-turn Prototype Address: " + detector.rightturn_address);
 
         final long startTime = System.currentTimeMillis();
-        // int result = detector.detectObjects("C:\\Users\\HAORAN\\Desktop\\stopsign.jpg");
-        // int result = detector.detectObjects("C:\\Users\\HAORAN\\Desktop\\rightturn.png");
-        // int result = detector.detectObjects("C:\\Users\\HAORAN\\Desktop\\leftturn.png");
-        // int result = detector.detectObjects("C:\\Users\\HAORAN\\Desktop\\redlight.png");
-        int result = detector.detectObjects("C:\\Users\\HAORAN\\Desktop\\greenlight.png");
+        // int result = detector.detectObjects_MSE("C:\\Users\\HAORAN\\Desktop\\rightturn.png");
+        // int result = detector.detectObjects_MSE("C:\\Users\\HAORAN\\Desktop\\leftturn.png");
+
+        int result = detector.detectObjects_CASCADE("C:\\Users\\HAORAN\\Desktop\\stopsign.jpg");
+        // int result = detector.detectObjects_CASCADE("C:\\Users\\HAORAN\\Desktop\\greenlight.jpg");
+        // int result = detector.detectObjects_CASCADE("C:\\Users\\HAORAN\\Desktop\\redlight.jpg");
 
         final long endTime = System.currentTimeMillis();
         System.out.println("Total execution time: " + (endTime - startTime) + "ms");
