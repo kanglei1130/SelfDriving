@@ -28,13 +28,17 @@ import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Size;
+import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
 
-import wisc.selfdriving.OpencvNativeClass;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+
 import wisc.selfdriving.R;
 import wisc.selfdriving.service.SerialPortConnection;
 import wisc.selfdriving.service.SerialPortService;
-import wisc.selfdriving.utility.CarControl;
-import wisc.selfdriving.utility.Constants;
 import wisc.selfdriving.utility.SerialReading;
 
 
@@ -46,6 +50,12 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     JavaCameraView javaCameraView;
 
     Mat mRgba, mGray;
+
+    ObjectDetector detector;
+    File mCascadeFile_stop;
+    File mCascadeFile_trafficlight;
+    boolean isStart = false;
+    long previousTimer = 0;
 
     public int rotation = 0;
 
@@ -107,6 +117,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     Manifest.permission.WAKE_LOCK
             }, 1001);
         }
+        loadCascadexml();
     }
 
     public void setButtonOnClickListener() {
@@ -131,7 +142,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             }
         });
     }
-
 
     protected void onPause() {
         super.onPause();
@@ -162,6 +172,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     @Override
     public void onCameraViewStarted(int width, int height) {
         mRgba = new Mat(height, width, CvType.CV_8UC4);
+        //mRgba = new Mat(480, 640, CvType.CV_8UC4);
+
         mGray = new Mat(height, width, CvType.CV_8UC4);
     }
 
@@ -171,44 +183,123 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         mRgba.release();
     }
 
+    public void loadCascadexml(){
+        try {
+            // Copy the resource into a temp file so OpenCV can load it
+            InputStream is_stop = getResources().openRawResource(R.raw.stop_sign);
+            File cascadeDir_stop = getDir("cascade_stop", Context.MODE_PRIVATE);
+            mCascadeFile_stop = new File(cascadeDir_stop, "cascade_stop.xml");
+            FileOutputStream os_stop = new FileOutputStream(mCascadeFile_stop);
+            Log.d(TAG, "left cascade" + cascadeDir_stop.getAbsolutePath());
+
+            InputStream is_trafficlight = getResources().openRawResource(R.raw.traffic_light);
+            File cascadeDir_trafficlight = getDir("cascade_trafficlight", Context.MODE_PRIVATE);
+            mCascadeFile_trafficlight = new File(cascadeDir_trafficlight, "cascade_trafficlight.xml");
+            FileOutputStream os_trafficlight = new FileOutputStream(mCascadeFile_trafficlight);
+
+            byte[] buffer2 = new byte[80096];
+            int bytesRead2;
+            while ((bytesRead2 = is_stop.read(buffer2)) != -1) {
+                os_stop.write(buffer2, 0, bytesRead2);
+            }
+
+            byte[] buffer1 = new byte[80096];
+            int bytesRead1;
+            while ((bytesRead1 = is_trafficlight.read(buffer1)) != -1) {
+                os_trafficlight.write(buffer1, 0, bytesRead1);
+            }
+
+            is_stop.close();
+            is_trafficlight.close();
+            os_stop.close();
+            os_trafficlight.close();
+
+        } catch (Exception e) {
+            Log.e("OpenCVActivity", "Error loading cascade", e);
+        }
+    }
+
+
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         mRgba = inputFrame.rgba();
 
-        /*
-        if(mSerialPortConnection != null && counter%50==0) {
-            long start = System.currentTimeMillis();
-            int ret = mSerialPortConnection.sendCommandFunction("time(" + String.valueOf(System.currentTimeMillis()) + ")");
-            long end = System.currentTimeMillis();
-
-            if(ret != -1) {
-                sum += (end - start);
-                counter++;
-                //Log.d(TAG, "It took " + (end - start) + "ms to process the image" + " average:" + sum / counter);
-            }
+       if(!isStart){
+            Thread controlThread = new Thread(detectorThread);
+            controlThread.start();
+            isStart = true;
         }
-        counter++;
-        */
-        //38ms to process an image on average
-        //Nexus 5x
-
-        //long start = System.currentTimeMillis();
-        int steering = OpencvNativeClass.convertGray(mRgba.getNativeObjAddr(), mGray.getNativeObjAddr());
-        //long end = System.currentTimeMillis();
-        //sum += (end - start);
-        //counter++;
-        //Log.d(TAG, "It took " + (end - start) + "ms to process the image" + " average:" + sum/counter);
-
-        /*
-        CarControl command = new CarControl();
-        command.setRelativeControl();
-        command.steering_ = steering;
-        updateCarControl(command);
-        */
-
-        return mGray;
+        return mRgba;
     }
 
+
+    Runnable detectorThread = new Runnable() {
+        @Override
+        public void run() {
+            while (true) {
+                //Todo reszie  the mRgba or lower down the fequecy of mRgba detector
+                if(true) {
+                    detector = new ObjectDetector();
+
+                    final long startTime = System.currentTimeMillis();
+                    int result = 0;
+                    //control detect frequency
+                    //if (startTime - previousTimer>500) {
+                    Mat detectorMrgba = new Mat();
+                    mRgba.copyTo(detectorMrgba);
+                    result = detector.detectObjects_CASCADE(detectorMrgba, mCascadeFile_stop, mCascadeFile_trafficlight);
+                    /*if (result==0) {
+                        mRgba.copyTo(detectorMrgba);
+                        result = detector.detectObjects_MSE(detectorMrgba,mFile_leftturn,mFile_rightturn);
+                    }*/
+                    detectorMrgba.release();
+                    //mRgba.release();
+                    detector = null;
+
+                    final long endTime = System.currentTimeMillis();
+                    //Log.d(TAG, "Total execution time: " + (endTime - startTime) + "ms");
+                    previousTimer = endTime;
+
+                    switch (result) {
+                        case 1:
+                            //Log.d(TAG,"Stop-sign");
+                            if (mSerialPortConnection != null) {
+                                mSerialPortConnection.sendCommandFunction("throttle(0.0)");
+                            }
+                            break;
+                        case 2:
+                            //Log.d(TAG,"Red-light");
+                            if (mSerialPortConnection != null) {
+                                mSerialPortConnection.sendCommandFunction("throttle(0.0)");
+                            }
+                            break;
+                        case 3:
+                            //Log.d(TAG,"Green-light");
+                            if (mSerialPortConnection != null) {
+                                mSerialPortConnection.sendCommandFunction("throttle(1.1)");
+                            }
+                            break;
+                        case 4:
+                            //Log.d(TAG,"Left-turn");
+                            if (mSerialPortConnection != null) {
+                                mSerialPortConnection.sendCommandFunction("steering(0.1)");
+                            }
+                            break;
+                        case 5:
+                            //Log.d(TAG,"Right-turn");
+                            if (mSerialPortConnection != null) {
+                                mSerialPortConnection.sendCommandFunction("steering(1.0)");
+                            }
+                            break;
+                        default:
+                            //Log.d(TAG,"Nothing Found!");
+                            break;
+                    }
+                }
+
+            }
+        }
+    };
 
 
     //initial SerialPortConnection
@@ -236,7 +327,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             mSerialPortConnection = null;
         }
     }
-
 
     //receive data from USBSerial
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {

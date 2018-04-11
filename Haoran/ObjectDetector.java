@@ -14,6 +14,7 @@ public class ObjectDetector {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
+
     public static String stopsign_address = "C:\\Users\\HAORAN\\Desktop\\stop_sign_prototype.png";
     public static String redlight_address = "C:\\Users\\HAORAN\\Desktop\\red_light_prototype.png";
     public static String greenlight_address = "C:\\Users\\HAORAN\\Desktop\\green_light_prototype.png";
