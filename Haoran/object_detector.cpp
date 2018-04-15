@@ -23,8 +23,7 @@ using namespace std;
      - 4 for left-turn-sign,
      - 5 for right-turn-sign
 */
-int detectObjects_CASCADE(string target, string stopsign_xml, string trafficlight_xml) {
-    Mat mat = imread(target);
+int detectObjects_CASCADE(Mat mat, string stopsign_xml, string trafficlight_xml) {
     CascadeClassifier stopSignDetector, trafficLightDetector;
     stopSignDetector.load(stopsign_xml);
     trafficLightDetector.load(trafficlight_xml);
@@ -73,9 +72,7 @@ static double meanSquareError(const Mat &img1, const Mat &img2) {
      - 4 for left-turn-sign,
      - 5 for right-turn-sign
 */
-int detectObjects_MSE(string left_prototype, string right_prototype, string target) {
-    Mat mat = imread(target);
-
+int detectObjects_MSE(string left_prototype, string right_prototype, Mat mat) {
     // resize the image
     int width = 500;
     int height = width * mat.rows / mat.cols;
