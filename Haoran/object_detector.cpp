@@ -19,9 +19,7 @@ using namespace std;
      - 0 for nothing found,
      - 1 for stop-sign,
      - 2 for red light,
-     - 3 for green light,
-     - 4 for left-turn-sign,
-     - 5 for right-turn-sign
+     - 3 for green light
 */
 int detectObjects_CASCADE(Mat mat, string stopsign_xml, string trafficlight_xml) {
     CascadeClassifier stopSignDetector, trafficLightDetector;

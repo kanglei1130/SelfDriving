@@ -36,6 +36,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 
+import wisc.selfdriving.OpencvNativeClass;
 import wisc.selfdriving.R;
 import wisc.selfdriving.service.SerialPortConnection;
 import wisc.selfdriving.service.SerialPortService;
@@ -247,7 +248,11 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     //if (startTime - previousTimer>500) {
                     Mat detectorMrgba = new Mat();
                     mRgba.copyTo(detectorMrgba);
-                    result = detector.detectObjects_CASCADE(detectorMrgba, mCascadeFile_stop, mCascadeFile_trafficlight);
+
+                    //int a = OpencvNativeClass.convertGray((long) 0.1111,(long) 0.11);
+
+                    result = OpencvNativeClass.detector(detectorMrgba.getNativeObjAddr(),"/sdcard/stop_sign.xml", "/sdcard/traffic_light.xml", "/sdcard/Pictures/left_turn_prototype.png", "/sdcard/Pictures/right_turn_prototype.png");//"/data/user/0/wisc.selfdriving/app_cascade_trafficlight"
+                    //result = detector.detectObjects_CASCADE(detectorMrgba, mCascadeFile_stop, mCascadeFile_trafficlight);
                     /*if (result==0) {
                         mRgba.copyTo(detectorMrgba);
                         result = detector.detectObjects_MSE(detectorMrgba,mFile_leftturn,mFile_rightturn);
@@ -257,42 +262,42 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     detector = null;
 
                     final long endTime = System.currentTimeMillis();
-                    //Log.d(TAG, "Total execution time: " + (endTime - startTime) + "ms");
+                    Log.d(TAG, "Total execution time: " + (endTime - startTime) + "ms");
                     previousTimer = endTime;
 
                     switch (result) {
                         case 1:
-                            //Log.d(TAG,"Stop-sign");
+                            Log.d(TAG,"Stop-sign");
                             if (mSerialPortConnection != null) {
                                 mSerialPortConnection.sendCommandFunction("throttle(0.0)");
                             }
                             break;
                         case 2:
-                            //Log.d(TAG,"Red-light");
+                            Log.d(TAG,"Red-light");
                             if (mSerialPortConnection != null) {
                                 mSerialPortConnection.sendCommandFunction("throttle(0.0)");
                             }
                             break;
                         case 3:
-                            //Log.d(TAG,"Green-light");
+                            Log.d(TAG,"Green-light");
                             if (mSerialPortConnection != null) {
                                 mSerialPortConnection.sendCommandFunction("throttle(1.1)");
                             }
                             break;
                         case 4:
-                            //Log.d(TAG,"Left-turn");
+                            Log.d(TAG,"Left-turn");
                             if (mSerialPortConnection != null) {
                                 mSerialPortConnection.sendCommandFunction("steering(0.1)");
                             }
                             break;
                         case 5:
-                            //Log.d(TAG,"Right-turn");
+                            Log.d(TAG,"Right-turn");
                             if (mSerialPortConnection != null) {
                                 mSerialPortConnection.sendCommandFunction("steering(1.0)");
                             }
                             break;
                         default:
-                            //Log.d(TAG,"Nothing Found!");
+                            Log.d(TAG,"Nothing Found!");
                             break;
                     }
                 }
