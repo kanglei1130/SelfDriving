@@ -52,7 +52,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     Mat mRgba, mGray;
 
-    ObjectDetector detector;
+    //ObjectDetector detector;
     File mCascadeFile_stop;
     File mCascadeFile_trafficlight;
     boolean isStart = false;
@@ -118,7 +118,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     Manifest.permission.WAKE_LOCK
             }, 1001);
         }
-        loadCascadexml();
+        //loadCascadexml();
     }
 
     public void setButtonOnClickListener() {
@@ -173,8 +173,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     @Override
     public void onCameraViewStarted(int width, int height) {
         mRgba = new Mat(height, width, CvType.CV_8UC4);
-        //mRgba = new Mat(480, 640, CvType.CV_8UC4);
-
         mGray = new Mat(height, width, CvType.CV_8UC4);
     }
 
@@ -184,7 +182,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         mRgba.release();
     }
 
-    public void loadCascadexml(){
+    //load cascade when use java based detector
+   /* public void loadCascadexml(){
         try {
             // Copy the resource into a temp file so OpenCV can load it
             InputStream is_stop = getResources().openRawResource(R.raw.stop_sign);
@@ -218,8 +217,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         } catch (Exception e) {
             Log.e("OpenCVActivity", "Error loading cascade", e);
         }
-    }
-
+    }*/
 
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
@@ -233,14 +231,13 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         return mRgba;
     }
 
-
     Runnable detectorThread = new Runnable() {
         @Override
         public void run() {
             while (true) {
                 //Todo reszie  the mRgba or lower down the fequecy of mRgba detector
                 if(true) {
-                    detector = new ObjectDetector();
+                    //detector = new ObjectDetector();//if use java Detector
 
                     final long startTime = System.currentTimeMillis();
                     int result = 0;
@@ -249,17 +246,14 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     Mat detectorMrgba = new Mat();
                     mRgba.copyTo(detectorMrgba);
 
-                    //int a = OpencvNativeClass.convertGray((long) 0.1111,(long) 0.11);
-
-                    result = OpencvNativeClass.detector(detectorMrgba.getNativeObjAddr(),"/sdcard/stop_sign.xml", "/sdcard/traffic_light.xml", "/sdcard/Pictures/left_turn_prototype.png", "/sdcard/Pictures/right_turn_prototype.png");//"/data/user/0/wisc.selfdriving/app_cascade_trafficlight"
+                    result = OpencvNativeClass.detector(detectorMrgba.getNativeObjAddr(),"/sdcard/stop_sign.xml", "/sdcard/traffic_light.xml", "/sdcard/Pictures/left_turn_prototype.png", "/sdcard/Pictures/right_turn_prototype.png");//internal storage "/data/user/0/wisc.selfdriving/app_cascade_trafficlight"
                     //result = detector.detectObjects_CASCADE(detectorMrgba, mCascadeFile_stop, mCascadeFile_trafficlight);
                     /*if (result==0) {
                         mRgba.copyTo(detectorMrgba);
                         result = detector.detectObjects_MSE(detectorMrgba,mFile_leftturn,mFile_rightturn);
                     }*/
                     detectorMrgba.release();
-                    //mRgba.release();
-                    detector = null;
+                    //detector = null;
 
                     final long endTime = System.currentTimeMillis();
                     Log.d(TAG, "Total execution time: " + (endTime - startTime) + "ms");

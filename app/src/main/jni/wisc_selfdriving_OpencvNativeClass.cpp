@@ -1,11 +1,4 @@
-//
-// Created by lkang on 2/8/17.
-//
-
 #include <wisc_selfdriving_OpencvNativeClass.h>
-//
-// Created by lkang on 1/25/17.
-//
 
 JNIEXPORT jdouble JNICALL Java_wisc_selfdriving_OpencvNativeClass_getSteeringAngle(JNIEnv *, jclass)
 {
@@ -15,7 +8,6 @@ JNIEXPORT jdouble JNICALL Java_wisc_selfdriving_OpencvNativeClass_getAcceleratio
 {
     return 0.0;
 }
-
 
 JNIEXPORT jint JNICALL Java_wisc_selfdriving_OpencvNativeClass_convertGray(JNIEnv *, jclass, jlong addrRgba, jlong addrGray)
 {
@@ -30,6 +22,7 @@ JNIEXPORT jint JNICALL Java_wisc_selfdriving_OpencvNativeClass_convertGray(JNIEn
     return retVal;
 }
 
+//cpp can not parse jstring directly to string
 string jstring2string(JNIEnv *env, jstring jStr) {
     if (!jStr)
         return "";
@@ -49,6 +42,8 @@ string jstring2string(JNIEnv *env, jstring jStr) {
     return ret;
 }
 
+
+//main function of detection. The xml and image storage in sdcard
 JNIEXPORT jint JNICALL Java_wisc_selfdriving_OpencvNativeClass_detector(JNIEnv *env, jclass, jlong ptr, jstring stopsign, jstring traffic, jstring leftturn, jstring rightturn)
 {
     Mat* mRgb = (Mat*) ptr;
@@ -81,7 +76,6 @@ void publish_points(Mat& img, Points& points, const Vec3b& icolor) {
 	}
 }
 
-
 int toGray(Mat src, Mat& gray)
 {
     cvtColor( src, gray, COLOR_BGR2GRAY );
@@ -96,7 +90,6 @@ int toGray(Mat src, Mat& gray)
     Point center(src.cols/2, src.rows*4/5);
     temp.at<Vec3b>(center.y, center.x) = kLaneRed;
 
-
 	Mat test = Mat::zeros(src.rows, src.cols, src.type());
     cvtColor(gray, test, COLOR_GRAY2BGR);
 
@@ -105,7 +98,7 @@ int toGray(Mat src, Mat& gray)
     publish_points(test, left, kLaneRed);
     publish_points(test, right, kLaneRed);
 
-    	//Point
+    //Point
     Points cline = detector.getDirectionLine();
     publish_points(test, cline, kLaneWhite);
 
@@ -142,6 +135,7 @@ int toGray(Mat src, Mat& gray)
      - 2 for red light,
      - 3 for green light
 */
+////////////////suggest you let students modify the code below//////////////////////
 int detectObjects_CASCADE(Mat mat, string stopsign_xml, string trafficlight_xml) {
     CascadeClassifier stopSignDetector, trafficLightDetector;
     //stopSignDetector.load(stopsign_xml);

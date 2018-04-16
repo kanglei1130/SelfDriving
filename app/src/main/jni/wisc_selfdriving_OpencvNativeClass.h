@@ -23,6 +23,7 @@
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
 
+//for log using
 #include <android/log.h>
 #define LOG_TAG "DetectorCPP"
 #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
