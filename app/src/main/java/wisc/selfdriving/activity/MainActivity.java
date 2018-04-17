@@ -281,13 +281,13 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                         case 4:
                             Log.d(TAG,"Left-turn");
                             if (mSerialPortConnection != null) {
-                                mSerialPortConnection.sendCommandFunction("steering(0.1)");
+                                mSerialPortConnection.sendCommandFunction("steering(0.2)");
                             }
                             break;
                         case 5:
                             Log.d(TAG,"Right-turn");
                             if (mSerialPortConnection != null) {
-                                mSerialPortConnection.sendCommandFunction("steering(1.0)");
+                                mSerialPortConnection.sendCommandFunction("steering(0.8)");
                             }
                             break;
                         default:
