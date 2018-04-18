@@ -58,13 +58,13 @@ JNIEXPORT jint JNICALL Java_wisc_selfdriving_OpencvNativeClass_detector(JNIEnv *
     }
     int result = detectObjects_CASCADE(*mRgb, stop_sign, traffic_light);
     if (result == 1)
-        LOGD("Stop-sign");
+        //LOGD("Stop-sign");
     else
-        LOGD("NIL");
+        //LOGD("NIL");
     if (result != 0)
         return (jint) result;
     else
-      result = detectObjects_MSE(left_turn, right_turn, *mRgb);
+      //result = detectObjects_MSE(left_turn, right_turn, *mRgb);
     return (jint)result;
 }
 
@@ -153,7 +153,7 @@ int detectObjects_CASCADE(Mat mat, string stopsign_xml, string trafficlight_xml)
     if (targetVectors.size() > 0)
         return 1;
     else
-        cout << "No stop sign found!" << endl;
+        LOGD("No stop sign found!");
 
     trafficLightDetector.detectMultiScale(mat, targetVectors);
     for(size_t i = 0 ; i < targetVectors.size() ; ++i) {
@@ -175,9 +175,14 @@ int detectObjects_CASCADE(Mat mat, string stopsign_xml, string trafficlight_xml)
 
 double meanSquareError(const Mat &img1, const Mat &img2) {
     Mat s1;
-    if (img1.rows == img2.rows)
-        LOGD("fuck");
+    if (img1.rows == img2.rows && img1.cols == img2.cols)
+        LOGD("the same size");
+
+    resize(img1, img1, img2.size());
+    resize(img2, img2, img2.size());
     absdiff(img1, img2, s1);   // |img1 - img2|
+    //bitwise_xor(img1, img2, s1);
+    //bitwise_and( img1, img1, s1, img2 );
     s1.convertTo(s1, CV_32F);  // cannot make a square on 8 bits
     s1 = s1.mul(s1);           // |img1 - img2|^2
     Scalar s = sum(s1);        // sum elements per channel
