@@ -22,7 +22,7 @@ JNIEXPORT jint JNICALL Java_wisc_selfdriving_OpencvNativeClass_convertGray(JNIEn
     return retVal;
 }
 
-//cpp can not parse jstring directly to string
+//Android can not parse jstring directly to string
 string jstring2string(JNIEnv *env, jstring jStr) {
     if (!jStr)
         return "";
@@ -58,9 +58,9 @@ JNIEXPORT jint JNICALL Java_wisc_selfdriving_OpencvNativeClass_detector(JNIEnv *
     }
     int result = detectObjects_CASCADE(*mRgb, stop_sign, traffic_light);
     if (result == 1)
-        //LOGD("Stop-sign");
+        LOGD("Stop-sign");
     else
-        //LOGD("NIL");
+        LOGD("NIL");
     if (result != 0)
         return (jint) result;
     else
@@ -138,11 +138,8 @@ int toGray(Mat src, Mat& gray)
 ////////////////suggest you let students modify the code below//////////////////////
 int detectObjects_CASCADE(Mat mat, string stopsign_xml, string trafficlight_xml) {
     CascadeClassifier stopSignDetector, trafficLightDetector;
-    //stopSignDetector.load(stopsign_xml);
+    stopSignDetector.load(stopsign_xml);
     trafficLightDetector.load(trafficlight_xml);
-    if(!stopSignDetector.load(stopsign_xml)) {
-        LOGD("Error loading cascade of stop sign");
-    }
 
     Mat detectorMrgba;
     mat.copyTo(detectorMrgba);
@@ -161,8 +158,6 @@ int detectObjects_CASCADE(Mat mat, string stopsign_xml, string trafficlight_xml)
         for (int x = rect.x; x+3 < rect.x+rect.width; x += 3) {
             for (int y = rect.y; y+3 < rect.y+rect.height; y+= 3) {
                 rgb = mat.at<Vec3b>(x, y);
-                // if (rgb == NULL)
-                //    continue;
                 if (rgb[0] - rgb[1] > 40)
                     return 2;
                 else if (rgb[1] - rgb[0] > 40)
@@ -177,12 +172,7 @@ double meanSquareError(const Mat &img1, const Mat &img2) {
     Mat s1;
     if (img1.rows == img2.rows && img1.cols == img2.cols)
         LOGD("the same size");
-
-    resize(img1, img1, img2.size());
-    resize(img2, img2, img2.size());
     absdiff(img1, img2, s1);   // |img1 - img2|
-    //bitwise_xor(img1, img2, s1);
-    //bitwise_and( img1, img1, s1, img2 );
     s1.convertTo(s1, CV_32F);  // cannot make a square on 8 bits
     s1 = s1.mul(s1);           // |img1 - img2|^2
     Scalar s = sum(s1);        // sum elements per channel

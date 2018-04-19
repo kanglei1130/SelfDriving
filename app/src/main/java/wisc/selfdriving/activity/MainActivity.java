@@ -28,20 +28,12 @@ import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.core.Size;
-import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
 
 import wisc.selfdriving.OpencvNativeClass;
 import wisc.selfdriving.R;
 import wisc.selfdriving.service.SerialPortConnection;
 import wisc.selfdriving.service.SerialPortService;
 import wisc.selfdriving.utility.SerialReading;
-
 
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
@@ -52,9 +44,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     Mat mRgba, mGray;
 
-    //ObjectDetector detector;
-    File mCascadeFile_stop;
-    File mCascadeFile_trafficlight;
     boolean isStart = false;
     long previousTimer = 0;
 
@@ -118,7 +107,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     Manifest.permission.WAKE_LOCK
             }, 1001);
         }
-        //loadCascadexml();
     }
 
     public void setButtonOnClickListener() {
@@ -182,43 +170,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         mRgba.release();
     }
 
-    //load cascade when use java based detector
-   /* public void loadCascadexml(){
-        try {
-            // Copy the resource into a temp file so OpenCV can load it
-            InputStream is_stop = getResources().openRawResource(R.raw.stop_sign);
-            File cascadeDir_stop = getDir("cascade_stop", Context.MODE_PRIVATE);
-            mCascadeFile_stop = new File(cascadeDir_stop, "cascade_stop.xml");
-            FileOutputStream os_stop = new FileOutputStream(mCascadeFile_stop);
-            Log.d(TAG, "left cascade" + cascadeDir_stop.getAbsolutePath());
-
-            InputStream is_trafficlight = getResources().openRawResource(R.raw.traffic_light);
-            File cascadeDir_trafficlight = getDir("cascade_trafficlight", Context.MODE_PRIVATE);
-            mCascadeFile_trafficlight = new File(cascadeDir_trafficlight, "cascade_trafficlight.xml");
-            FileOutputStream os_trafficlight = new FileOutputStream(mCascadeFile_trafficlight);
-
-            byte[] buffer2 = new byte[80096];
-            int bytesRead2;
-            while ((bytesRead2 = is_stop.read(buffer2)) != -1) {
-                os_stop.write(buffer2, 0, bytesRead2);
-            }
-
-            byte[] buffer1 = new byte[80096];
-            int bytesRead1;
-            while ((bytesRead1 = is_trafficlight.read(buffer1)) != -1) {
-                os_trafficlight.write(buffer1, 0, bytesRead1);
-            }
-
-            is_stop.close();
-            is_trafficlight.close();
-            os_stop.close();
-            os_trafficlight.close();
-
-        } catch (Exception e) {
-            Log.e("OpenCVActivity", "Error loading cascade", e);
-        }
-    }*/
-
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         mRgba = inputFrame.rgba();
@@ -237,24 +188,16 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             while (true) {
                 //Todo reszie  the mRgba or lower down the fequecy of mRgba detector
                 if(true) {
-                    //detector = new ObjectDetector();//if use java Detector
 
                     final long startTime = System.currentTimeMillis();
                     int result = 0;
-                    //control detect frequency
-                    //if (startTime - previousTimer>500) {
+
                     Mat detectorMrgba = new Mat();
                     mRgba.copyTo(detectorMrgba);
 
                     //the xml file is in sdcard
                     result = OpencvNativeClass.detector(detectorMrgba.getNativeObjAddr(),"/sdcard/stop_sign.xml", "/sdcard/traffic_light.xml", "/sdcard/Pictures/left_turn_prototype.png", "/sdcard/Pictures/right_turn_prototype.png");//internal storage "/data/user/0/wisc.selfdriving/app_cascade_trafficlight"
-                    //result = detector.detectObjects_CASCADE(detectorMrgba, mCascadeFile_stop, mCascadeFile_trafficlight);//use if detect by java class
-                    /*if (result==0) {
-                        mRgba.copyTo(detectorMrgba);
-                        result = detector.detectObjects_MSE(detectorMrgba,mFile_leftturn,mFile_rightturn);
-                    }*/
                     detectorMrgba.release();
-                    //detector = null;
 
                     final long endTime = System.currentTimeMillis();
                     Log.d(TAG, "Total execution time: " + (endTime - startTime) + "ms");
