@@ -10,7 +10,7 @@ import org.opencv.core.Mat;
 
 public class OpencvNativeClass {
     public native static int convertGray(long matAddrRgba, long matAddrGray);
-    public native static int detector(long ptr, String a, String b, String c, String d);
+    public native static int detector(long ptr, String stop_sign, String traffic_light, String left_turn, String right_turn);
 
     public native static double getSteeringAngle();
     public native static double getAcceleration();

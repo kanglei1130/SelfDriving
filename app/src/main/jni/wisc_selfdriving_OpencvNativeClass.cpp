@@ -56,15 +56,8 @@ JNIEXPORT jint JNICALL Java_wisc_selfdriving_OpencvNativeClass_detector(JNIEnv *
       LOGD("empty");
       return (jint)-1;
     }
-    int result = detectObjects_CASCADE(*mRgb, stop_sign, traffic_light);
-    if (result == 1)
-        LOGD("Stop-sign");
-    else
-        LOGD("NIL");
-    if (result != 0)
-        return (jint) result;
-    else
-      //result = detectObjects_MSE(left_turn, right_turn, *mRgb);
+    int result = detectObjects_CASCADE(*mRgb, stop_sign, traffic_light, left_turn, right_turn);
+
     return (jint)result;
 }
 
@@ -86,7 +79,6 @@ int toGray(Mat src, Mat& gray)
     Mat temp = Mat::zeros(src.rows, src.cols, src.type());
     detector.laneMarkerDetector(gray, src, temp);
 
-
     Point center(src.cols/2, src.rows*4/5);
     temp.at<Vec3b>(center.y, center.x) = kLaneRed;
 
@@ -101,7 +93,6 @@ int toGray(Mat src, Mat& gray)
     //Point
     Points cline = detector.getDirectionLine();
     publish_points(test, cline, kLaneWhite);
-
 
 	int leftsum = 0;
 	int rightsum = 0;
@@ -136,10 +127,12 @@ int toGray(Mat src, Mat& gray)
      - 3 for green light
 */
 ////////////////suggest you let students modify the code below//////////////////////
-int detectObjects_CASCADE(Mat mat, string stopsign_xml, string trafficlight_xml) {
-    CascadeClassifier stopSignDetector, trafficLightDetector;
+int detectObjects_CASCADE(Mat mat, string stopsign_xml, string trafficlight_xml, string leftturn_xml, string rightturn_xml) {
+    CascadeClassifier stopSignDetector, trafficLightDetector, leftTurnDetector, rightTurnDetector;
     stopSignDetector.load(stopsign_xml);
     trafficLightDetector.load(trafficlight_xml);
+    leftTurnDetector.load(leftturn_xml);
+    rightTurnDetector.load(rightturn_xml);
 
     Mat detectorMrgba;
     mat.copyTo(detectorMrgba);
@@ -149,8 +142,6 @@ int detectObjects_CASCADE(Mat mat, string stopsign_xml, string trafficlight_xml)
     stopSignDetector.detectMultiScale(detectorMrgba, targetVectors);
     if (targetVectors.size() > 0)
         return 1;
-    else
-        LOGD("No stop sign found!");
 
     trafficLightDetector.detectMultiScale(mat, targetVectors);
     for(size_t i = 0 ; i < targetVectors.size() ; ++i) {
@@ -165,6 +156,19 @@ int detectObjects_CASCADE(Mat mat, string stopsign_xml, string trafficlight_xml)
             }
         }
     }
+
+    /* Return an integer:
+     - 4 for left-turn-sign,
+     - 5 for right-turn-sign
+    */
+    leftTurnDetector.detectMultiScale(detectorMrgba, targetVectors);
+    if (targetVectors.size() > 0)
+        return 4;
+
+    rightTurnDetector.detectMultiScale(detectorMrgba, targetVectors);
+    if (targetVectors.size() > 0)
+        return 5;
+
     return 0; // nothing find
 }
 
@@ -181,10 +185,7 @@ double meanSquareError(const Mat &img1, const Mat &img2) {
     return mse;
 }
 
-/* Return an integer:
-     - 4 for left-turn-sign,
-     - 5 for right-turn-sign
-*/
+/* In case useful for tutorial, not used here*/
 int detectObjects_MSE(string left_prototype, string right_prototype, Mat mat) {
     // resize the image
     int width = 500;

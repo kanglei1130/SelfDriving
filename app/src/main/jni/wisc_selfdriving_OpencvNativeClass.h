@@ -45,7 +45,7 @@ extern "C" {
 int toGray(Mat img, Mat& gray);
 void publish_points(Mat& img, Points& points, const Vec3b& icolor);
 
-int detectObjects_CASCADE(Mat mat, string stopsign_xml, string trafficlight_xml);
+int detectObjects_CASCADE(Mat mat, string stopsign_xml, string trafficlight_xml, string leftturn_xml, string rightturn_xml);
 double meanSquareError(const Mat &img1, const Mat &img2);
 int detectObjects_MSE(string left_prototype, string right_prototype, Mat mat);
 string jstring2string(JNIEnv *env, jstring jStr);

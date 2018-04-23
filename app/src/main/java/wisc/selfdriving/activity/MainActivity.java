@@ -196,7 +196,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     mRgba.copyTo(detectorMrgba);
 
                     //the xml file is in sdcard
-                    result = OpencvNativeClass.detector(detectorMrgba.getNativeObjAddr(),"/sdcard/stop_sign.xml", "/sdcard/traffic_light.xml", "/sdcard/Pictures/left_turn_prototype.png", "/sdcard/Pictures/right_turn_prototype.png");//internal storage "/data/user/0/wisc.selfdriving/app_cascade_trafficlight"
+                    result = OpencvNativeClass.detector(detectorMrgba.getNativeObjAddr(),"/sdcard/stop_sign.xml", "/sdcard/traffic_light.xml", "/sdcard/left_turn.xml", "/sdcard/right_turn.xml");//internal storage "/data/user/0/wisc.selfdriving/app_cascade_trafficlight"
                     detectorMrgba.release();
 
                     final long endTime = System.currentTimeMillis();
